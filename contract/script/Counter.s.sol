@@ -1,19 +1,26 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
 
-import {Script, console} from "forge-std/Script.sol";
-import {Counter} from "../src/Counter.sol";
+import "forge-std/Script.sol";
+import "../src/Cirlcle.sol";
 
-contract CounterScript is Script {
-    Counter public counter;
+contract CheckBalance is Script {
+    function run() external view {
+        address tokenAddress = 0xae6c13C19ff16110BAD54E54280ec1014994631f;
+        address user = 0x690C65EB2e2dd321ACe41a9865Aea3fAa98be2A5;
 
-    function setUp() public {}
+        Circle circle = Circle(tokenAddress);
+        uint256 balance = circle.balanceOf(user);
+        
+        uint8 decimals = circle.decimals();
 
-    function run() public {
-        vm.startBroadcast();
+        console.log("Raw balance:", balance);
+        console.log("Decimals:", decimals);
 
-        counter = new Counter();
+        // Display balance as decimal using two values: integer and fractional parts
+        uint256 integerPart = balance / 10 ** decimals;
+        uint256 fractionalPart = balance % 10 ** decimals;
 
-        vm.stopBroadcast();
+        console.log("User balance: %s.%s", integerPart, fractionalPart);
     }
 }

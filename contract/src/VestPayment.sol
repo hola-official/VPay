@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -14,11 +14,31 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
     // Enums for contract permissions
-    enum CancelPermission { NONE, SENDER_ONLY, RECIPIENT_ONLY, BOTH }
-    enum ChangeRecipientPermission { NONE, SENDER_ONLY, RECIPIENT_ONLY, BOTH }
-    
+    enum CancelPermission {
+        NONE,
+        SENDER_ONLY,
+        RECIPIENT_ONLY,
+        BOTH
+    }
+    enum ChangeRecipientPermission {
+        NONE,
+        SENDER_ONLY,
+        RECIPIENT_ONLY,
+        BOTH
+    }
+
     // Unlock schedule frequencies
-    enum UnlockSchedule { SECOND, MINUTE, HOUR, DAILY, WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY }
+    enum UnlockSchedule {
+        SECOND,
+        MINUTE,
+        HOUR,
+        DAILY,
+        WEEKLY,
+        BIWEEKLY,
+        MONTHLY,
+        QUARTERLY,
+        YEARLY
+    }
 
     struct VestingSchedule {
         address recipient;
@@ -40,38 +60,26 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
     address public sender;
     uint256 public totalVestedAmount;
     uint256 public vestingScheduleCount;
-    
+
     // Mappings
     mapping(uint256 => VestingSchedule) public vestingSchedules;
     mapping(address => uint256[]) public recipientSchedules;
-    
+
     // Events
     event VestingScheduleCreated(
-        uint256 indexed scheduleId,
-        address indexed recipient,
-        uint256 amount,
-        uint256 startTime,
-        uint256 endTime
+        uint256 indexed scheduleId, address indexed recipient, uint256 amount, uint256 startTime, uint256 endTime
     );
-    
-    event TokensReleased(
-        uint256 indexed scheduleId,
-        address indexed recipient,
-        uint256 amount
-    );
-    
+
+    event TokensReleased(uint256 indexed scheduleId, address indexed recipient, uint256 amount);
+
     event VestingScheduleCancelled(uint256 indexed scheduleId);
-    
-    event RecipientChanged(
-        uint256 indexed scheduleId,
-        address indexed oldRecipient,
-        address indexed newRecipient
-    );
+
+    event RecipientChanged(uint256 indexed scheduleId, address indexed oldRecipient, address indexed newRecipient);
 
     constructor(address _token, address _sender) Ownable(msg.sender) {
         require(_token != address(0), "Token address cannot be zero");
         require(_sender != address(0), "Sender address cannot be zero");
-        
+
         token = IERC20(_token);
         sender = _sender;
     }
@@ -97,7 +105,7 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         require(_recipients.length == _recipientEmails.length, "Recipients and emails length mismatch");
         require(_startTime < _endTime, "Start time must be before end time");
         require(_endTime > block.timestamp, "End time must be in the future");
-        
+
         // Validate that vesting duration is divisible by unlock schedule
         uint256 vestingDuration = _endTime - _startTime;
         uint256 unlockInterval = getUnlockInterval(_unlockSchedule);
@@ -118,7 +126,7 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
             require(_amounts[i] > 0, "Amount must be greater than 0");
 
             uint256 scheduleId = vestingScheduleCount;
-            
+
             vestingSchedules[scheduleId] = VestingSchedule({
                 recipient: _recipients[i],
                 totalAmount: _amounts[i],
@@ -135,14 +143,8 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
             });
 
             recipientSchedules[_recipients[i]].push(scheduleId);
-            
-            emit VestingScheduleCreated(
-                scheduleId,
-                _recipients[i],
-                _amounts[i],
-                _startTime,
-                _endTime
-            );
+
+            emit VestingScheduleCreated(scheduleId, _recipients[i], _amounts[i], _startTime, _endTime);
 
             vestingScheduleCount++;
         }
@@ -155,7 +157,7 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         VestingSchedule storage schedule = vestingSchedules[_scheduleId];
         require(!schedule.cancelled, "Vesting schedule is cancelled");
         require(schedule.totalAmount > 0, "Schedule does not exist");
-        
+
         uint256 releasableAmount = getReleasableAmount(_scheduleId);
         require(releasableAmount > 0, "No tokens available for release");
 
@@ -197,31 +199,33 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         VestingSchedule storage schedule = vestingSchedules[_scheduleId];
         require(schedule.totalAmount > 0, "Schedule does not exist");
         require(!schedule.cancelled, "Schedule already cancelled");
-        
+
         bool canCancel = false;
         if (schedule.cancelPermission == CancelPermission.SENDER_ONLY && msg.sender == sender) {
             canCancel = true;
         } else if (schedule.cancelPermission == CancelPermission.RECIPIENT_ONLY && msg.sender == schedule.recipient) {
             canCancel = true;
-        } else if (schedule.cancelPermission == CancelPermission.BOTH && 
-                  (msg.sender == sender || msg.sender == schedule.recipient)) {
+        } else if (
+            schedule.cancelPermission == CancelPermission.BOTH
+                && (msg.sender == sender || msg.sender == schedule.recipient)
+        ) {
             canCancel = true;
         }
-        
+
         require(canCancel, "Not authorized to cancel this schedule");
 
         schedule.cancelled = true;
-        
+
         // Return unvested tokens to sender
         uint256 releasableAmount = getReleasableAmount(_scheduleId);
         uint256 unreleasedAmount = schedule.totalAmount - schedule.releasedAmount - releasableAmount;
-        
+
         if (releasableAmount > 0) {
             schedule.releasedAmount += releasableAmount;
             token.safeTransfer(schedule.recipient, releasableAmount);
             emit TokensReleased(_scheduleId, schedule.recipient, releasableAmount);
         }
-        
+
         if (unreleasedAmount > 0) {
             token.safeTransfer(sender, unreleasedAmount);
         }
@@ -234,27 +238,31 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
      */
     function changeRecipient(uint256 _scheduleId, address _newRecipient) external {
         require(_newRecipient != address(0), "New recipient cannot be zero address");
-        
+
         VestingSchedule storage schedule = vestingSchedules[_scheduleId];
         require(schedule.totalAmount > 0, "Schedule does not exist");
         require(!schedule.cancelled, "Schedule is cancelled");
-        
+
         bool canChange = false;
         if (schedule.changeRecipientPermission == ChangeRecipientPermission.SENDER_ONLY && msg.sender == sender) {
             canChange = true;
-        } else if (schedule.changeRecipientPermission == ChangeRecipientPermission.RECIPIENT_ONLY && 
-                  msg.sender == schedule.recipient) {
+        } else if (
+            schedule.changeRecipientPermission == ChangeRecipientPermission.RECIPIENT_ONLY
+                && msg.sender == schedule.recipient
+        ) {
             canChange = true;
-        } else if (schedule.changeRecipientPermission == ChangeRecipientPermission.BOTH && 
-                  (msg.sender == sender || msg.sender == schedule.recipient)) {
+        } else if (
+            schedule.changeRecipientPermission == ChangeRecipientPermission.BOTH
+                && (msg.sender == sender || msg.sender == schedule.recipient)
+        ) {
             canChange = true;
         }
-        
+
         require(canChange, "Not authorized to change recipient");
 
         address oldRecipient = schedule.recipient;
         schedule.recipient = _newRecipient;
-        
+
         // Update recipient schedules mapping
         _removeScheduleFromRecipient(oldRecipient, _scheduleId);
         recipientSchedules[_newRecipient].push(_scheduleId);
@@ -297,7 +305,7 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
      */
     function getVestedAmount(uint256 _scheduleId) public view returns (uint256) {
         VestingSchedule memory schedule = vestingSchedules[_scheduleId];
-        
+
         if (block.timestamp < schedule.startTime) {
             return 0;
         } else if (block.timestamp >= schedule.endTime) {
@@ -307,7 +315,7 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         uint256 unlockInterval = getUnlockInterval(schedule.unlockSchedule);
         uint256 elapsedIntervals = (block.timestamp - schedule.startTime) / unlockInterval;
         uint256 totalIntervals = (schedule.endTime - schedule.startTime) / unlockInterval;
-        
+
         return (schedule.totalAmount * elapsedIntervals) / totalIntervals;
     }
 
@@ -337,18 +345,22 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
     /**
      * @dev Gets schedule details
      */
-    function getScheduleDetails(uint256 _scheduleId) external view returns (
-        address recipient,
-        uint256 totalAmount,
-        uint256 releasedAmount,
-        uint256 startTime,
-        uint256 endTime,
-        UnlockSchedule unlockSchedule,
-        bool autoClaim,
-        bool cancelled,
-        string memory contractTitle,
-        string memory recipientEmail
-    ) {
+    function getScheduleDetails(uint256 _scheduleId)
+        external
+        view
+        returns (
+            address recipient,
+            uint256 totalAmount,
+            uint256 releasedAmount,
+            uint256 startTime,
+            uint256 endTime,
+            UnlockSchedule unlockSchedule,
+            bool autoClaim,
+            bool cancelled,
+            string memory contractTitle,
+            string memory recipientEmail
+        )
+    {
         VestingSchedule memory schedule = vestingSchedules[_scheduleId];
         return (
             schedule.recipient,

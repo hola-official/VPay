@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -67,8 +67,8 @@ contract TokenLocker is Ownable, ReentrancyGuard {
         _;
     }
 
-    constructor(address _feeRecipient) payable Ownable(msg.sender) {
-        feeRecipient = _feeRecipient;
+    constructor() payable Ownable(msg.sender) {
+        feeRecipient = msg.sender;
     }
 
     function lock(

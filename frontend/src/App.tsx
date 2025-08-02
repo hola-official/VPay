@@ -1,9 +1,9 @@
-import React from 'react'
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const App = () => {
   return (
-    <div className='bg-red-500 text-2xl'>
-      Hello World
+    <div className='bg-red-500 text-2xl min-h-screen w-full'>
+     <ConnectButton/>
     </div>
   )
 }
