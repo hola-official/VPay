@@ -5,13 +5,16 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /**
- * @title MultiRecipientTokenVesting
- * @dev A token vesting contract that supports multiple recipients with individual schedules
+ * @title MultiTokenVestingManager
+ * @dev A single contract that manages vesting schedules for multiple tokens and recipients
  */
-contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
+contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     // Enums for contract permissions
     enum CancelPermission {
@@ -20,6 +23,7 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         RECIPIENT_ONLY,
         BOTH
     }
+    
     enum ChangeRecipientPermission {
         NONE,
         SENDER_ONLY,
@@ -41,6 +45,9 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
     }
 
     struct VestingSchedule {
+        uint256 id;
+        address token;
+        address sender;
         address recipient;
         uint256 totalAmount;
         uint256 releasedAmount;
@@ -53,41 +60,125 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         string recipientEmail;
         CancelPermission cancelPermission;
         ChangeRecipientPermission changeRecipientPermission;
+        uint256 createdAt;
+    }
+
+    struct TokenVestingInfo {
+        address token;
+        uint256 totalVestedAmount;
+        uint256 totalReleasedAmount;
+        uint256 activeSchedulesCount;
     }
 
     // State variables
-    IERC20 public immutable token;
-    address public sender;
-    uint256 public totalVestedAmount;
-    uint256 public vestingScheduleCount;
-
-    // Mappings
-    mapping(uint256 => VestingSchedule) public vestingSchedules;
-    mapping(address => uint256[]) public recipientSchedules;
-
+    uint256 private constant ID_PADDING = 1_000_000;
+    VestingSchedule[] private _vestingSchedules;
+    
+    // Mappings for efficient lookups
+    mapping(address => EnumerableSet.UintSet) private _recipientSchedules;
+    mapping(address => EnumerableSet.UintSet) private _senderSchedules;
+    mapping(address => EnumerableSet.UintSet) private _tokenSchedules;
+    
+    // Token tracking
+    EnumerableSet.AddressSet private _vestedTokens;
+    mapping(address => TokenVestingInfo) public tokenVestingInfo;
+    
+    // Fee system (optional, like TokenLocker)
+    address private feeRecipient;
+    uint256 public vestingFeePercentage = 0; // 0% by default, can be set by owner
+    
     // Events
     event VestingScheduleCreated(
-        uint256 indexed scheduleId, address indexed recipient, uint256 amount, uint256 startTime, uint256 endTime
+        uint256 indexed scheduleId,
+        address indexed token,
+        address indexed sender,
+        address recipient,
+        uint256 amount,
+        uint256 startTime,
+        uint256 endTime
     );
 
-    event TokensReleased(uint256 indexed scheduleId, address indexed recipient, uint256 amount);
+    event TokensReleased(
+        uint256 indexed scheduleId,
+        address indexed token,
+        address indexed recipient,
+        uint256 amount
+    );
 
     event VestingScheduleCancelled(uint256 indexed scheduleId);
 
-    event RecipientChanged(uint256 indexed scheduleId, address indexed oldRecipient, address indexed newRecipient);
+    event RecipientChanged(
+        uint256 indexed scheduleId,
+        address indexed oldRecipient,
+        address indexed newRecipient
+    );
 
-    constructor(address _token, address _sender) Ownable(msg.sender) {
-        require(_token != address(0), "Token address cannot be zero");
-        require(_sender != address(0), "Sender address cannot be zero");
+    event VestingFeeUpdated(uint256 newFeePercentage);
 
-        token = IERC20(_token);
-        sender = _sender;
+    modifier validSchedule(uint256 scheduleId) {
+        _getActualIndex(scheduleId);
+        _;
+    }
+
+    constructor() Ownable(msg.sender) {
+        feeRecipient = msg.sender;
     }
 
     /**
-     * @dev Creates multiple vesting schedules
+     * @dev Creates a single vesting schedule
      */
-    function createVestingSchedules(
+    function createVestingSchedule(
+        address _token,
+        address _recipient,
+        uint256 _amount,
+        uint256 _startTime,
+        uint256 _endTime,
+        UnlockSchedule _unlockSchedule,
+        bool _autoClaim,
+        string memory _contractTitle,
+        string memory _recipientEmail,
+        CancelPermission _cancelPermission,
+        ChangeRecipientPermission _changeRecipientPermission
+    ) external returns (uint256 scheduleId) {
+        require(_token != address(0), "Token address cannot be zero");
+        require(_recipient != address(0), "Recipient cannot be zero address");
+        require(_amount > 0, "Amount must be greater than 0");
+        require(_startTime < _endTime, "Start time must be before end time");
+        require(_endTime > block.timestamp, "End time must be in the future");
+
+        // Validate that vesting duration is divisible by unlock schedule
+        uint256 vestingDuration = _endTime - _startTime;
+        uint256 unlockInterval = getUnlockInterval(_unlockSchedule);
+        require(vestingDuration % unlockInterval == 0, "Vesting duration must be divisible by unlock schedule");
+
+        scheduleId = _createSchedule(
+            _token,
+            msg.sender,
+            _recipient,
+            _amount,
+            _startTime,
+            _endTime,
+            _unlockSchedule,
+            _autoClaim,
+            _contractTitle,
+            _recipientEmail,
+            _cancelPermission,
+            _changeRecipientPermission
+        );
+
+        // Transfer tokens from sender to contract
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
+
+        emit VestingScheduleCreated(scheduleId, _token, msg.sender, _recipient, _amount, _startTime, _endTime);
+        
+        return scheduleId;
+    }
+
+    /**
+     * @dev Creates multiple vesting schedules for the same token and parameters
+     */
+    function createMultipleVestingSchedules(
+        address _token,
         address[] memory _recipients,
         uint256[] memory _amounts,
         uint256 _startTime,
@@ -98,8 +189,8 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         string[] memory _recipientEmails,
         CancelPermission _cancelPermission,
         ChangeRecipientPermission _changeRecipientPermission
-    ) external {
-        require(msg.sender == sender, "Only sender can create vesting schedules");
+    ) external returns (uint256[] memory scheduleIds) {
+        require(_token != address(0), "Token address cannot be zero");
         require(_recipients.length == _amounts.length, "Recipients and amounts length mismatch");
         require(_recipients.length == _contractTitles.length, "Recipients and titles length mismatch");
         require(_recipients.length == _recipientEmails.length, "Recipients and emails length mismatch");
@@ -112,102 +203,186 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         require(vestingDuration % unlockInterval == 0, "Vesting duration must be divisible by unlock schedule");
 
         uint256 totalAmount = 0;
-        for (uint256 i = 0; i < _amounts.length; i++) {
-            totalAmount += _amounts[i];
-        }
+        scheduleIds = new uint256[](_recipients.length);
 
-        // Transfer tokens from sender to contract
-        token.safeTransferFrom(sender, address(this), totalAmount);
-        totalVestedAmount += totalAmount;
-
-        // Create vesting schedules
+        // Create all schedules first
         for (uint256 i = 0; i < _recipients.length; i++) {
             require(_recipients[i] != address(0), "Recipient cannot be zero address");
             require(_amounts[i] > 0, "Amount must be greater than 0");
+            
+            totalAmount += _amounts[i];
+            
+            scheduleIds[i] = _createSchedule(
+                _token,
+                msg.sender,
+                _recipients[i],
+                _amounts[i],
+                _startTime,
+                _endTime,
+                _unlockSchedule,
+                _autoClaim,
+                _contractTitles[i],
+                _recipientEmails[i],
+                _cancelPermission,
+                _changeRecipientPermission
+            );
 
-            uint256 scheduleId = vestingScheduleCount;
-
-            vestingSchedules[scheduleId] = VestingSchedule({
-                recipient: _recipients[i],
-                totalAmount: _amounts[i],
-                releasedAmount: 0,
-                startTime: _startTime,
-                endTime: _endTime,
-                unlockSchedule: _unlockSchedule,
-                autoClaim: _autoClaim,
-                cancelled: false,
-                contractTitle: _contractTitles[i],
-                recipientEmail: _recipientEmails[i],
-                cancelPermission: _cancelPermission,
-                changeRecipientPermission: _changeRecipientPermission
-            });
-
-            recipientSchedules[_recipients[i]].push(scheduleId);
-
-            emit VestingScheduleCreated(scheduleId, _recipients[i], _amounts[i], _startTime, _endTime);
-
-            vestingScheduleCount++;
+            emit VestingScheduleCreated(
+                scheduleIds[i],
+                _token,
+                msg.sender,
+                _recipients[i],
+                _amounts[i],
+                _startTime,
+                _endTime
+            );
         }
+
+        // Transfer total amount once
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), totalAmount);
+
+        return scheduleIds;
+    }
+
+    /**
+     * @dev Internal function to create a vesting schedule
+     */
+    function _createSchedule(
+        address _token,
+        address _sender,
+        address _recipient,
+        uint256 _amount,
+        uint256 _startTime,
+        uint256 _endTime,
+        UnlockSchedule _unlockSchedule,
+        bool _autoClaim,
+        string memory _contractTitle,
+        string memory _recipientEmail,
+        CancelPermission _cancelPermission,
+        ChangeRecipientPermission _changeRecipientPermission
+    ) internal returns (uint256 scheduleId) {
+        scheduleId = _vestingSchedules.length + ID_PADDING;
+
+        VestingSchedule memory newSchedule = VestingSchedule({
+            id: scheduleId,
+            token: _token,
+            sender: _sender,
+            recipient: _recipient,
+            totalAmount: _amount,
+            releasedAmount: 0,
+            startTime: _startTime,
+            endTime: _endTime,
+            unlockSchedule: _unlockSchedule,
+            autoClaim: _autoClaim,
+            cancelled: false,
+            contractTitle: _contractTitle,
+            recipientEmail: _recipientEmail,
+            cancelPermission: _cancelPermission,
+            changeRecipientPermission: _changeRecipientPermission,
+            createdAt: block.timestamp
+        });
+
+        _vestingSchedules.push(newSchedule);
+
+        // Update mappings
+        _recipientSchedules[_recipient].add(scheduleId);
+        _senderSchedules[_sender].add(scheduleId);
+        _tokenSchedules[_token].add(scheduleId);
+        _vestedTokens.add(_token);
+
+        // Update token info
+        TokenVestingInfo storage tokenInfo = tokenVestingInfo[_token];
+        if (tokenInfo.token == address(0)) {
+            tokenInfo.token = _token;
+        }
+        tokenInfo.totalVestedAmount += _amount;
+        tokenInfo.activeSchedulesCount++;
+
+        return scheduleId;
     }
 
     /**
      * @dev Releases vested tokens for a specific schedule
      */
-    function release(uint256 _scheduleId) external nonReentrant {
-        VestingSchedule storage schedule = vestingSchedules[_scheduleId];
+    function release(uint256 _scheduleId) external nonReentrant validSchedule(_scheduleId) {
+        VestingSchedule storage schedule = _vestingSchedules[_getActualIndex(_scheduleId)];
         require(!schedule.cancelled, "Vesting schedule is cancelled");
-        require(schedule.totalAmount > 0, "Schedule does not exist");
 
         uint256 releasableAmount = getReleasableAmount(_scheduleId);
         require(releasableAmount > 0, "No tokens available for release");
 
-        schedule.releasedAmount += releasableAmount;
-        token.safeTransfer(schedule.recipient, releasableAmount);
+        uint256 fee = 0;
+        uint256 amountAfterFee = releasableAmount;
 
-        emit TokensReleased(_scheduleId, schedule.recipient, releasableAmount);
+        if (vestingFeePercentage > 0) {
+            fee = (releasableAmount * vestingFeePercentage) / 10000; // Using basis points
+            amountAfterFee = releasableAmount - fee;
+        }
+
+        schedule.releasedAmount += releasableAmount;
+        
+        // Update token info
+        tokenVestingInfo[schedule.token].totalReleasedAmount += releasableAmount;
+
+        IERC20(schedule.token).safeTransfer(schedule.recipient, amountAfterFee);
+        
+        if (fee > 0) {
+            IERC20(schedule.token).safeTransfer(feeRecipient, fee);
+        }
+
+        emit TokensReleased(_scheduleId, schedule.token, schedule.recipient, amountAfterFee);
     }
 
     /**
      * @dev Releases tokens for all schedules of a recipient
      */
     function releaseAll(address _recipient) external nonReentrant {
-        uint256[] memory scheduleIds = recipientSchedules[_recipient];
+        uint256[] memory scheduleIds = getRecipientSchedules(_recipient);
         require(scheduleIds.length > 0, "No schedules found for recipient");
 
-        uint256 totalReleasable = 0;
         for (uint256 i = 0; i < scheduleIds.length; i++) {
-            VestingSchedule storage schedule = vestingSchedules[scheduleIds[i]];
+            VestingSchedule storage schedule = _vestingSchedules[_getActualIndex(scheduleIds[i])];
             if (!schedule.cancelled) {
                 uint256 releasableAmount = getReleasableAmount(scheduleIds[i]);
                 if (releasableAmount > 0) {
+                    uint256 fee = 0;
+                    uint256 amountAfterFee = releasableAmount;
+
+                    if (vestingFeePercentage > 0) {
+                        fee = (releasableAmount * vestingFeePercentage) / 10000;
+                        amountAfterFee = releasableAmount - fee;
+                    }
+
                     schedule.releasedAmount += releasableAmount;
-                    totalReleasable += releasableAmount;
-                    emit TokensReleased(scheduleIds[i], _recipient, releasableAmount);
+                    tokenVestingInfo[schedule.token].totalReleasedAmount += releasableAmount;
+
+                    IERC20(schedule.token).safeTransfer(_recipient, amountAfterFee);
+                    
+                    if (fee > 0) {
+                        IERC20(schedule.token).safeTransfer(feeRecipient, fee);
+                    }
+
+                    emit TokensReleased(scheduleIds[i], schedule.token, _recipient, amountAfterFee);
                 }
             }
-        }
-
-        if (totalReleasable > 0) {
-            token.safeTransfer(_recipient, totalReleasable);
         }
     }
 
     /**
      * @dev Cancels a vesting schedule
      */
-    function cancelVestingSchedule(uint256 _scheduleId) external {
-        VestingSchedule storage schedule = vestingSchedules[_scheduleId];
-        require(schedule.totalAmount > 0, "Schedule does not exist");
+    function cancelVestingSchedule(uint256 _scheduleId) external validSchedule(_scheduleId) {
+        VestingSchedule storage schedule = _vestingSchedules[_getActualIndex(_scheduleId)];
         require(!schedule.cancelled, "Schedule already cancelled");
 
         bool canCancel = false;
-        if (schedule.cancelPermission == CancelPermission.SENDER_ONLY && msg.sender == sender) {
+        if (schedule.cancelPermission == CancelPermission.SENDER_ONLY && msg.sender == schedule.sender) {
             canCancel = true;
         } else if (schedule.cancelPermission == CancelPermission.RECIPIENT_ONLY && msg.sender == schedule.recipient) {
             canCancel = true;
         } else if (
             schedule.cancelPermission == CancelPermission.BOTH
-                && (msg.sender == sender || msg.sender == schedule.recipient)
+                && (msg.sender == schedule.sender || msg.sender == schedule.recipient)
         ) {
             canCancel = true;
         }
@@ -216,19 +391,38 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
 
         schedule.cancelled = true;
 
-        // Return unvested tokens to sender
+        // Release any currently vested tokens to recipient
         uint256 releasableAmount = getReleasableAmount(_scheduleId);
         uint256 unreleasedAmount = schedule.totalAmount - schedule.releasedAmount - releasableAmount;
 
         if (releasableAmount > 0) {
+            uint256 fee = 0;
+            uint256 amountAfterFee = releasableAmount;
+
+            if (vestingFeePercentage > 0) {
+                fee = (releasableAmount * vestingFeePercentage) / 10000;
+                amountAfterFee = releasableAmount - fee;
+            }
+
             schedule.releasedAmount += releasableAmount;
-            token.safeTransfer(schedule.recipient, releasableAmount);
-            emit TokensReleased(_scheduleId, schedule.recipient, releasableAmount);
+            tokenVestingInfo[schedule.token].totalReleasedAmount += releasableAmount;
+
+            IERC20(schedule.token).safeTransfer(schedule.recipient, amountAfterFee);
+            
+            if (fee > 0) {
+                IERC20(schedule.token).safeTransfer(feeRecipient, fee);
+            }
+
+            emit TokensReleased(_scheduleId, schedule.token, schedule.recipient, amountAfterFee);
         }
 
+        // Return unvested tokens to sender
         if (unreleasedAmount > 0) {
-            token.safeTransfer(sender, unreleasedAmount);
+            IERC20(schedule.token).safeTransfer(schedule.sender, unreleasedAmount);
         }
+
+        // Update token info
+        tokenVestingInfo[schedule.token].activeSchedulesCount--;
 
         emit VestingScheduleCancelled(_scheduleId);
     }
@@ -236,15 +430,14 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
     /**
      * @dev Changes the recipient of a vesting schedule
      */
-    function changeRecipient(uint256 _scheduleId, address _newRecipient) external {
+    function changeRecipient(uint256 _scheduleId, address _newRecipient) external validSchedule(_scheduleId) {
         require(_newRecipient != address(0), "New recipient cannot be zero address");
 
-        VestingSchedule storage schedule = vestingSchedules[_scheduleId];
-        require(schedule.totalAmount > 0, "Schedule does not exist");
+        VestingSchedule storage schedule = _vestingSchedules[_getActualIndex(_scheduleId)];
         require(!schedule.cancelled, "Schedule is cancelled");
 
         bool canChange = false;
-        if (schedule.changeRecipientPermission == ChangeRecipientPermission.SENDER_ONLY && msg.sender == sender) {
+        if (schedule.changeRecipientPermission == ChangeRecipientPermission.SENDER_ONLY && msg.sender == schedule.sender) {
             canChange = true;
         } else if (
             schedule.changeRecipientPermission == ChangeRecipientPermission.RECIPIENT_ONLY
@@ -253,7 +446,7 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
             canChange = true;
         } else if (
             schedule.changeRecipientPermission == ChangeRecipientPermission.BOTH
-                && (msg.sender == sender || msg.sender == schedule.recipient)
+                && (msg.sender == schedule.sender || msg.sender == schedule.recipient)
         ) {
             canChange = true;
         }
@@ -264,8 +457,8 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         schedule.recipient = _newRecipient;
 
         // Update recipient schedules mapping
-        _removeScheduleFromRecipient(oldRecipient, _scheduleId);
-        recipientSchedules[_newRecipient].push(_scheduleId);
+        _recipientSchedules[oldRecipient].remove(_scheduleId);
+        _recipientSchedules[_newRecipient].add(_scheduleId);
 
         emit RecipientChanged(_scheduleId, oldRecipient, _newRecipient);
     }
@@ -274,24 +467,37 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
      * @dev Auto-claim function for schedules with auto-claim enabled
      */
     function processAutoClaims() external {
-        for (uint256 i = 0; i < vestingScheduleCount; i++) {
-            VestingSchedule storage schedule = vestingSchedules[i];
+        for (uint256 i = 0; i < _vestingSchedules.length; i++) {
+            VestingSchedule storage schedule = _vestingSchedules[i];
             if (schedule.autoClaim && !schedule.cancelled) {
-                uint256 releasableAmount = getReleasableAmount(i);
+                uint256 releasableAmount = getReleasableAmount(schedule.id);
                 if (releasableAmount > 0) {
+                    uint256 fee = 0;
+                    uint256 amountAfterFee = releasableAmount;
+
+                    if (vestingFeePercentage > 0) {
+                        fee = (releasableAmount * vestingFeePercentage) / 10000;
+                        amountAfterFee = releasableAmount - fee;
+                    }
+
                     schedule.releasedAmount += releasableAmount;
-                    token.safeTransfer(schedule.recipient, releasableAmount);
-                    emit TokensReleased(i, schedule.recipient, releasableAmount);
+                    tokenVestingInfo[schedule.token].totalReleasedAmount += releasableAmount;
+
+                    IERC20(schedule.token).safeTransfer(schedule.recipient, amountAfterFee);
+                    
+                    if (fee > 0) {
+                        IERC20(schedule.token).safeTransfer(feeRecipient, fee);
+                    }
+
+                    emit TokensReleased(schedule.id, schedule.token, schedule.recipient, amountAfterFee);
                 }
             }
         }
     }
 
-    /**
-     * @dev Gets the releasable amount for a specific schedule
-     */
+    // View functions
     function getReleasableAmount(uint256 _scheduleId) public view returns (uint256) {
-        VestingSchedule memory schedule = vestingSchedules[_scheduleId];
+        VestingSchedule memory schedule = getScheduleById(_scheduleId);
         if (schedule.cancelled || block.timestamp < schedule.startTime) {
             return 0;
         }
@@ -300,11 +506,8 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         return vestedAmount - schedule.releasedAmount;
     }
 
-    /**
-     * @dev Gets the vested amount for a specific schedule
-     */
     function getVestedAmount(uint256 _scheduleId) public view returns (uint256) {
-        VestingSchedule memory schedule = vestingSchedules[_scheduleId];
+        VestingSchedule memory schedule = getScheduleById(_scheduleId);
 
         if (block.timestamp < schedule.startTime) {
             return 0;
@@ -319,9 +522,6 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         return (schedule.totalAmount * elapsedIntervals) / totalIntervals;
     }
 
-    /**
-     * @dev Gets the unlock interval in seconds for a given schedule type
-     */
     function getUnlockInterval(UnlockSchedule _schedule) public pure returns (uint256) {
         if (_schedule == UnlockSchedule.SECOND) return 1;
         if (_schedule == UnlockSchedule.MINUTE) return 60;
@@ -335,64 +535,71 @@ contract MultiRecipientTokenVesting is ReentrancyGuard, Ownable {
         return 86400; // Default to daily
     }
 
-    /**
-     * @dev Gets all schedule IDs for a recipient
-     */
-    function getRecipientSchedules(address _recipient) external view returns (uint256[] memory) {
-        return recipientSchedules[_recipient];
+    function getScheduleById(uint256 _scheduleId) public view returns (VestingSchedule memory) {
+        return _vestingSchedules[_getActualIndex(_scheduleId)];
     }
 
-    /**
-     * @dev Gets schedule details
-     */
-    function getScheduleDetails(uint256 _scheduleId)
-        external
-        view
-        returns (
-            address recipient,
-            uint256 totalAmount,
-            uint256 releasedAmount,
-            uint256 startTime,
-            uint256 endTime,
-            UnlockSchedule unlockSchedule,
-            bool autoClaim,
-            bool cancelled,
-            string memory contractTitle,
-            string memory recipientEmail
-        )
-    {
-        VestingSchedule memory schedule = vestingSchedules[_scheduleId];
-        return (
-            schedule.recipient,
-            schedule.totalAmount,
-            schedule.releasedAmount,
-            schedule.startTime,
-            schedule.endTime,
-            schedule.unlockSchedule,
-            schedule.autoClaim,
-            schedule.cancelled,
-            schedule.contractTitle,
-            schedule.recipientEmail
-        );
-    }
-
-    /**
-     * @dev Internal function to remove a schedule from recipient's list
-     */
-    function _removeScheduleFromRecipient(address _recipient, uint256 _scheduleId) internal {
-        uint256[] storage schedules = recipientSchedules[_recipient];
-        for (uint256 i = 0; i < schedules.length; i++) {
-            if (schedules[i] == _scheduleId) {
-                schedules[i] = schedules[schedules.length - 1];
-                schedules.pop();
-                break;
-            }
+    function getRecipientSchedules(address _recipient) public view returns (uint256[] memory) {
+        uint256 length = _recipientSchedules[_recipient].length();
+        uint256[] memory scheduleIds = new uint256[](length);
+        for (uint256 i = 0; i < length; i++) {
+            scheduleIds[i] = _recipientSchedules[_recipient].at(i);
         }
+        return scheduleIds;
     }
 
-    /**
-     * @dev Emergency function to recover tokens (only owner)
-     */
+    function getSenderSchedules(address _sender) public view returns (uint256[] memory) {
+        uint256 length = _senderSchedules[_sender].length();
+        uint256[] memory scheduleIds = new uint256[](length);
+        for (uint256 i = 0; i < length; i++) {
+            scheduleIds[i] = _senderSchedules[_sender].at(i);
+        }
+        return scheduleIds;
+    }
+
+    function getTokenSchedules(address _token) public view returns (uint256[] memory) {
+        uint256 length = _tokenSchedules[_token].length();
+        uint256[] memory scheduleIds = new uint256[](length);
+        for (uint256 i = 0; i < length; i++) {
+            scheduleIds[i] = _tokenSchedules[_token].at(i);
+        }
+        return scheduleIds;
+    }
+
+    function getTotalScheduleCount() external view returns (uint256) {
+        return _vestingSchedules.length;
+    }
+
+    function getAllVestedTokens() external view returns (address[] memory) {
+        uint256 length = _vestedTokens.length();
+        address[] memory tokens = new address[](length);
+        for (uint256 i = 0; i < length; i++) {
+            tokens[i] = _vestedTokens.at(i);
+        }
+        return tokens;
+    }
+
+    function _getActualIndex(uint256 scheduleId) internal view returns (uint256) {
+        if (scheduleId < ID_PADDING) {
+            revert("Invalid schedule id");
+        }
+        uint256 actualIndex = scheduleId - ID_PADDING;
+        require(actualIndex < _vestingSchedules.length, "Invalid schedule id");
+        return actualIndex;
+    }
+
+    // Owner functions
+    function setVestingFeePercentage(uint256 _feePercentage) external onlyOwner {
+        require(_feePercentage <= 1000, "Fee cannot exceed 10%"); // Max 10%
+        vestingFeePercentage = _feePercentage;
+        emit VestingFeeUpdated(_feePercentage);
+    }
+
+    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+        require(_feeRecipient != address(0), "Zero address");
+        feeRecipient = _feeRecipient;
+    }
+
     function emergencyWithdraw(address _token, uint256 _amount) external onlyOwner {
         IERC20(_token).safeTransfer(owner(), _amount);
     }

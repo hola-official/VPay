@@ -1,7 +1,7 @@
 // Test script to demonstrate API usage
 // Run with: node test-api.js
 
-const BASE_URL = "http://localhost:3000/api/workers";
+const BASE_URL = "https://v-pay-backend.vercel.app/api/workers";
 
 // Helper function to make API calls
 async function makeRequest(url, options = {}) {

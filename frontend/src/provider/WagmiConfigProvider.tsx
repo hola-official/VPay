@@ -20,7 +20,7 @@ const crossFiTestnet = defineChain({
   caipNetworkId: "eip155:4157",
   chainNamespace: "eip155",
   name: "CrossFi Testnet",
-  iconUrl: "/CrossFi-chain.jpg",
+  iconUrl: "/CrossFi-chain.png",
   nativeCurrency: {
     decimals: 18,
     name: "CrossFi Testnet",
@@ -140,7 +140,7 @@ export const WagmiConfigProvider = ({ children }: WagmiConfigProviderProps) => {
           // initialChain={crossFiDevnet?.id}
           modalSize="compact"
           theme={darkTheme({
-            accentColorForeground: "white",
+            // accentColorForeground: "white",
             fontStack: "system",
           })}
           avatar={customAvatar}
