@@ -28,7 +28,6 @@
     "cmdk": "^1.1.1",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.536.0",
-    "path": "^0.12.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^6.30.1",
