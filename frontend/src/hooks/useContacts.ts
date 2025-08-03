@@ -36,12 +36,17 @@ export function useContacts() {
     async (contactData: Omit<CreateWorkerData, "savedBy">) => {
       setLoading(true);
       setError(null);
+      if (!address) {
+        toast.error("Wallet not connected")
+      }
 
       try {
         const workerData: CreateWorkerData = {
           ...contactData,
           savedBy: address,
         };
+
+        console.log(workerData)
 
         const response = await apiService.createWorker(workerData);
         setContacts((prev) => [...prev, response.data]);

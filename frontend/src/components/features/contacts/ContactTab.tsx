@@ -264,14 +264,14 @@ export function ContactTab() {
                     </div>
                     <div>
                       <CardTitle className="text-white text-lg">{contact.fullName}</CardTitle>
-                      <Badge
+                     {contact.label && <Badge
                         variant="outline"
                         className={
                           contact.isActive ? "border-green-500/30 text-green-400" : "border-gray-500/30 text-gray-400"
                         }
                       >
                         {contact.label}
-                      </Badge>
+                      </Badge>}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
