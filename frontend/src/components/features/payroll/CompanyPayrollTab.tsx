@@ -4,7 +4,17 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Users, Trash2, Upload, Building2, BarChart2, HelpCircle, ChevronRight, AlertCircle } from "lucide-react"
+import {
+  Plus,
+  Users,
+  Trash2,
+  Upload,
+  Building2,
+  BarChart2,
+  HelpCircle,
+  ChevronRight,
+  AlertCircle,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,19 +24,24 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import type { Employee, PayrollSettings } from "@/types/employee"
 import { useContactsContext } from "@/contexts/ContactsContext"
 import type { Worker } from "@/services/api"
+import type { Employee, PayrollSettings } from "@/types/employee"
+import type { PayrollPreview } from "@/types/vesting"
 
 export default function CompanyPayrollTab() {
-  const { contacts, loading } = useContactsContext()
+  const { contacts } = useContactsContext()
   const [employees, setEmployees] = useState<Employee[]>([
     {
       id: "1",
       walletAddress: "",
+      salary: "",
+      email: "",
+      name: "",
       position: "",
+      startDate: "",
+      endDate: "",
       department: "",
-      salaryAmount: "",
       vestingSchedule: "MONTHLY",
       autoClaim: true,
       cancelPermission: "SENDER_ONLY",
@@ -45,7 +60,7 @@ export default function CompanyPayrollTab() {
 
   const [showHelp, setShowHelp] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [payrollPreview, setPayrollPreview] = useState(null)
+  const [payrollPreview, setPayrollPreview] = useState<PayrollPreview | null>(null)
 
   // Set minimum date to today
   const today = new Date()
@@ -56,9 +71,13 @@ export default function CompanyPayrollTab() {
     const newEmployee: Employee = {
       id: Date.now().toString(),
       walletAddress: "",
+      salary: "",
+      email: "",
+      name: "",
       position: "",
+      startDate: "",
+      endDate: "",
       department: "",
-      salaryAmount: "",
       vestingSchedule: "MONTHLY",
       autoClaim: true,
       cancelPermission: "SENDER_ONLY",
@@ -82,18 +101,14 @@ export default function CompanyPayrollTab() {
     updateEmployee(employeeId, "walletAddress", contact.walletAddress)
     updateEmployee(employeeId, "name", contact.fullName)
     updateEmployee(employeeId, "email", contact.email)
-    // Also auto-fill position if the contact has a label that could be used as position
-    if (contact.label) {
-      updateEmployee(employeeId, "position", contact.label)
-    }
   }
 
   const getTotalSalary = () => {
-    return employees.reduce((sum, e) => sum + (Number.parseFloat(e.salaryAmount) || 0), 0)
+    return employees.reduce((sum, e) => sum + (Number.parseFloat(e.salary) || 0), 0)
   }
 
   const calculatePayrollPreview = () => {
-    if (!payrollSettings.startDate || !payrollSettings.endDate || employees.length === 0) {
+    if (!payrollSettings.startDate || !payrollSettings.endDate) {
       setPayrollPreview(null)
       return
     }
@@ -270,7 +285,7 @@ export default function CompanyPayrollTab() {
             <ChevronRight className="w-5 h-5 text-gray-500" />
             <div className="flex items-center">
               <div
-                className={`flex items-center justify-center w-6 h-6 rounded-full ${employees.some((e) => e.walletAddress && e.salaryAmount)
+                className={`flex items-center justify-center w-6 h-6 rounded-full ${employees.some((e) => e.walletAddress && e.salary)
                   ? "bg-blue-500 text-white"
                   : "bg-black/80 text-gray-500"
                   } text-sm font-medium`}
@@ -278,7 +293,7 @@ export default function CompanyPayrollTab() {
                 3
               </div>
               <div
-                className={`ml-2 ${employees.some((e) => e.walletAddress && e.salaryAmount) ? "text-white" : "text-gray-500"
+                className={`ml-2 ${employees.some((e) => e.walletAddress && e.salary) ? "text-white" : "text-gray-500"
                   } font-medium`}
               >
                 Review & Deploy
@@ -289,7 +304,7 @@ export default function CompanyPayrollTab() {
             <div
               className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500"
               style={{
-                width: employees.some((e) => e.walletAddress && e.salaryAmount)
+                width: employees.some((e) => e.walletAddress && e.salary)
                   ? "100%"
                   : selectedToken && payrollSettings.companyName
                     ? "66%"
@@ -503,8 +518,8 @@ export default function CompanyPayrollTab() {
                       <div className="relative">
                         <Input
                           placeholder="5000"
-                          value={employee.salaryAmount}
-                          onChange={(e) => updateEmployee(employee.id, "salaryAmount", e.target.value)}
+                          value={employee.salary}
+                          onChange={(e) => updateEmployee(employee.id, "salary", e.target.value)}
                           className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-blue-500/50 pr-16"
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
@@ -648,7 +663,7 @@ export default function CompanyPayrollTab() {
           )}
 
           {/* Warning Message */}
-          {employees.some((e) => e.walletAddress && e.salaryAmount) && (
+          {employees.some((e) => e.walletAddress && e.salary) && (
             <div className="p-3 rounded-lg bg-black/80 border border-yellow-500/30">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
@@ -671,7 +686,7 @@ export default function CompanyPayrollTab() {
                 !payrollSettings.companyName ||
                 !payrollSettings.startDate ||
                 !payrollSettings.endDate ||
-                !employees.some((e) => e.walletAddress && e.salaryAmount)
+                !employees.some((e) => e.walletAddress && e.salary)
               }
               className="cursor-pointer px-8 py-3 h-12 text-white font-medium rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               whileHover={{ scale: 1.02 }}

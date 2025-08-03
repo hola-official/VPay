@@ -19,7 +19,6 @@ createRoot(document.getElementById('root')!).render(
       <WagmiConfigProvider>
         <QueryClientProvider client={queryClient}>
           <ToastContainer
-            position="buttom-right"
             autoClose={5000}
             hideProgressBar={false}
             newestOnTop={false}

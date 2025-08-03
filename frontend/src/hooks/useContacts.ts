@@ -16,6 +16,8 @@ export function useContacts() {
 
   // Load contacts from API
   const loadContacts = useCallback(async () => {
+    if (!address) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -29,7 +31,7 @@ export function useContacts() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [address]);
 
   // Create new contact
   const createContact = useCallback(
@@ -37,7 +39,8 @@ export function useContacts() {
       setLoading(true);
       setError(null);
       if (!address) {
-        toast.error("Wallet not connected")
+        toast.error("Wallet not connected");
+        throw new Error("Wallet not connected");
       }
 
       try {
@@ -46,7 +49,7 @@ export function useContacts() {
           savedBy: address,
         };
 
-        console.log(workerData)
+        console.log(workerData);
 
         const response = await apiService.createWorker(workerData);
         setContacts((prev) => [...prev, response.data]);
@@ -62,7 +65,7 @@ export function useContacts() {
         setLoading(false);
       }
     },
-    []
+    [address]
   );
 
   // Update contact
@@ -119,6 +122,8 @@ export function useContacts() {
         return;
       }
 
+      if (!address) return;
+
       setLoading(true);
       setError(null);
 
@@ -134,7 +139,7 @@ export function useContacts() {
         setLoading(false);
       }
     },
-    [loadContacts]
+    [loadContacts, address]
   );
 
   // Load contacts on mount

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, ReactNode } from "react"
+import { createContext, useContext } from "react"
+import type { ReactNode } from "react"
 import { useContacts } from "@/hooks/useContacts"
 import type { Worker } from "@/services/api"
 

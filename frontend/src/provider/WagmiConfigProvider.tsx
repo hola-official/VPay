@@ -1,26 +1,15 @@
-import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
-import { WagmiProvider, createConfig, http } from "wagmi";
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { defineChain } from "viem";
-import { createAvatar } from "@dicebear/core";
-import { pixelArt, personas } from "@dicebear/collection";
-import {
-  bitgetWallet,
-  walletConnectWallet,
-  metaMaskWallet,
-  rabbyWallet
-} from "@rainbow-me/rainbowkit/wallets";
-import { connectorsForWallets } from "@rainbow-me/rainbowkit";
-import type { ReactNode } from "react";
+import type { ReactNode } from "react"
+import { WagmiProvider, createConfig, http } from "wagmi"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit"
+import { createAvatar } from "@dicebear/core"
+import { pixelArt } from "@dicebear/collection"
+import { walletConnect } from "wagmi/connectors"
 
-const REOWN_CLOUD_APP_ID = import.meta.env.VITE_REOWN_CLOUD_APP_ID || "";
-
-const crossFiTestnet = defineChain({
+// Define the chain manually since crossFiTestnet doesn't exist
+const crossFiTestnet = {
   id: 4157,
-  caipNetworkId: "eip155:4157",
-  chainNamespace: "eip155",
   name: "CrossFi Testnet",
-  iconUrl: "/CrossFi-chain.png",
   nativeCurrency: {
     decimals: 18,
     name: "CrossFi Testnet",
@@ -28,8 +17,7 @@ const crossFiTestnet = defineChain({
   },
   rpcUrls: {
     default: {
-      http: [import.meta.env.VITE_CROSSFI_TESTNET_RPC_URL],
-      webSocket: [import.meta.env.VITE_CROSSFI_TESTNET_WS_URL],
+      http: [import.meta.env.VITE_CROSSFI_TESTNET_RPC_URL || "https://testnet-rpc.crossfi.com"],
     },
   },
   blockExplorers: {
@@ -38,25 +26,19 @@ const crossFiTestnet = defineChain({
       url: "https://test.xfiscan.com/",
     },
   }
-});
+} as const
 
-const connectors = connectorsForWallets(
-  [
-    {
-      groupName: "Recommended",
-      wallets: [
-        metaMaskWallet,
-        rabbyWallet,
-        bitgetWallet,
-        walletConnectWallet,
-      ],
-    },
-  ],
-  {
-    appName: "VPay",
+const REOWN_CLOUD_APP_ID = import.meta.env.VITE_REOWN_CLOUD_APP_ID
+
+if (!REOWN_CLOUD_APP_ID) {
+  console.error("REOWN_CLOUD_APP_ID is not set!")
+}
+
+const connectors = [
+  walletConnect({
     projectId: REOWN_CLOUD_APP_ID,
-  }
-);
+  })
+];
 
 const config = createConfig({
   connectors,
@@ -80,7 +62,7 @@ interface DicebearPersonaAvatarProps {
 
 const DicebearPersonaAvatar = ({ address, size }: DicebearPersonaAvatarProps) => {
   // Generate avatar using the same function from your code
-  const avatarUri = createAvatar(pixelArt, personas, {
+  const avatarUri = createAvatar(pixelArt, {
     seed: address.toLowerCase(),
     scale: 90,
     radius: 50,
@@ -100,7 +82,7 @@ const DicebearPersonaAvatar = ({ address, size }: DicebearPersonaAvatarProps) =>
 
 interface CustomAvatarProps {
   address: string;
-  ensImage?: string;
+  ensImage?: string | null;
   size: number;
 }
 

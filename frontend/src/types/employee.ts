@@ -5,8 +5,10 @@ export interface Employee {
   name?: string;
   email?: string;
   position: string;
+  salary: string;
+  startDate: string;
+  endDate: string;
   department: string;
-  salaryAmount: string;
   vestingSchedule: "MONTHLY" | "QUARTERLY" | "YEARLY";
   autoClaim: boolean;
   cancelPermission: "NONE" | "SENDER_ONLY" | "RECIPIENT_ONLY" | "BOTH";

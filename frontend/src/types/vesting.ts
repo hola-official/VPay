@@ -19,3 +19,19 @@ export interface VestingSettings {
   cycleBps: string;
   description: string;
 }
+
+export interface VestingPreview {
+  initialRelease: number;
+  cycleReleaseAmount: number;
+  totalCycles: number;
+  remainingAmount: number;
+  totalDays: number;
+}
+
+export interface PayrollPreview {
+  totalDuration: number;
+  totalPayments: number;
+  totalAmount: number;
+  intervalDays: number;
+  paymentAmount: number;
+}

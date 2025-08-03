@@ -25,11 +25,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useContactsContext } from "@/contexts/ContactsContext"
 import type { Worker } from "@/services/api"
-import type { VestingSettings } from "@/types/vesting"
+import type { VestingSettings, VestingPreview } from "@/types/vesting"
 import type { Recipient } from "@/types/recipient"
 
 export default function InvestorPaymentTab() {
-  const { contacts, loading } = useContactsContext()
+  const { contacts } = useContactsContext()
   const [recipients, setRecipients] = useState<Recipient[]>([
     {
       id: "1",
@@ -51,7 +51,7 @@ export default function InvestorPaymentTab() {
 
   const [showHelp, setShowHelp] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [vestingPreview, setVestingPreview] = useState(null)
+  const [vestingPreview, setVestingPreview] = useState<VestingPreview | null>(null)
 
   // Set minimum date to today
   const today = new Date()
@@ -276,8 +276,8 @@ export default function InvestorPaymentTab() {
             <div className="flex items-center">
               <div
                 className={`flex items-center justify-center w-6 h-6 rounded-full ${recipients.some((r) => r.walletAddress && r.amount)
-                    ? "bg-blue-500 text-white"
-                    : "bg-black/80 text-gray-500"
+                  ? "bg-blue-500 text-white"
+                  : "bg-black/80 text-gray-500"
                   } text-sm font-medium`}
               >
                 3
@@ -533,11 +533,11 @@ export default function InvestorPaymentTab() {
                                 <CommandEmpty className="text-gray-400 p-4">No contacts found.</CommandEmpty>
                                 <CommandGroup>
                                   {contacts.map((contact) => (
-                                                                      <CommandItem
-                                    key={contact._id}
-                                    onSelect={() => selectContact(recipient.id, contact)}
-                                    className="text-white hover:bg-white/10 cursor-pointer p-3"
-                                  >
+                                    <CommandItem
+                                      key={contact._id}
+                                      onSelect={() => selectContact(recipient.id, contact)}
+                                      className="text-white hover:bg-white/10 cursor-pointer p-3"
+                                    >
                                       <div className="flex items-center gap-3 w-full">
                                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold text-white">
                                           {contact.fullName.charAt(0)}

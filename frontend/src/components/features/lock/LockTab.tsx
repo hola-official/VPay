@@ -12,9 +12,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useContactsContext } from "@/contexts/ContactsContext"
 import type { Worker } from "@/services/api"
+import type { VestingPreview } from "@/types/vesting"
 
 export function LockTab() {
-  const { contacts, loading } = useContactsContext()
+  const { contacts } = useContactsContext()
   const [lockType, setLockType] = useState<"time" | "vesting">("time")
   const [formData, setFormData] = useState({
     amount: "",
@@ -31,9 +32,8 @@ export function LockTab() {
   })
 
   const [selectedToken, setSelectedToken] = useState("USDT")
-  const [showTooltip, setShowTooltip] = useState("")
   const [showHelp, setShowHelp] = useState(false)
-  const [vestingDetails, setVestingDetails] = useState(null)
+  const [vestingDetails, setVestingDetails] = useState<VestingPreview | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
 
   // Set minimum date to today
@@ -93,12 +93,6 @@ export function LockTab() {
     const date = new Date()
     date.setMonth(date.getMonth() + months)
     handleInputChange("unlockDate", date.toISOString().slice(0, 16))
-  }
-
-  const setQuickTgePeriod = (days: number) => {
-    const date = new Date()
-    date.setDate(date.getDate() + days)
-    handleInputChange("tgeDate", date.toISOString().slice(0, 16))
   }
 
   const setCyclePreset = (days: number) => {
