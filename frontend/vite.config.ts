@@ -10,4 +10,21 @@ export default defineConfig({
       "@": "/src",
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          wagmi: ["wagmi", "@rainbow-me/rainbowkit"],
+          ui: ["framer-motion", "lucide-react"],
+        },
+      },
+    },
+    target: "esnext",
+    minify: "terser",
+    sourcemap: false,
+  },
+  optimizeDeps: {
+    include: ["react", "react-dom", "wagmi", "@rainbow-me/rainbowkit"],
+  },
 });
