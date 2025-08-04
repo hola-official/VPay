@@ -65,15 +65,15 @@ const connectors = connectorsForWallets(
 const config = createConfig({
   connectors,
   chains: [crossFiTestnet],
-  // transports: {
-  //   [crossFiTestnet.id]: http(import.meta.env.VITE_CROSSFI_TESTNET_RPC_URL, {
-  //     fetchOptions: {
-  //       headers: {
-  //         Origin: window.location.origin,
-  //       },
-  //     },
-  //   }),
-  // },
+  transports: {
+    [crossFiTestnet.id]: http(import.meta.env.VITE_CROSSFI_TESTNET_RPC_URL, {
+      fetchOptions: {
+        headers: {
+          Origin: window.location.origin,
+        },
+      },
+    }),
+  },
   ssr: true,
 });
 
@@ -126,10 +126,9 @@ export const WagmiConfigProvider = ({ children }) => {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          // initialChain={pharosDevnet?.id}
           modalSize="compact"
           theme={darkTheme({
-            accentColor: "#97CBDC/30",
+            // accentColor: "#97CBDC/30",
             accentColorForeground: "white",
             fontStack: "system",
           })}
