@@ -1,280 +1,289 @@
-"use client";
+import { useState, useEffect, useCallback } from "react"
+import { useAccount } from "wagmi"
 
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "react-toastify";
-import { useAccount } from "wagmi";
+const BASE_URL = "https://v-pay-backend.vercel.app/api/workers"
 
 export function useContacts() {
-  const { address } = useAccount();
-  const [contacts, setContacts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [activeCount, setActiveCount] = useState(0);
+  const { address: userAddress } = useAccount()
+  const [contacts, setContacts] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  // Mock data for demonstration - replace with actual API calls
-  const mockContacts = [
-    {
-      _id: "1",
-      fullName: "Alice Johnson",
-      walletAddress: "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6",
-      email: "alice@example.com",
-      label: "Developer",
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      _id: "2",
-      fullName: "Bob Smith",
-      walletAddress: "0x8ba1f109551bD432803012645Hac136c22C57B",
-      email: "bob@example.com",
-      label: "Investor",
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    },
-  ];
+  // Helper function to make API calls
+  const makeRequest = async (url, options = {}) => {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
+        ...options,
+      })
 
-  // Load contacts from localStorage (mock implementation)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP error! status: ${response.status}`)
+      }
+
+      return data
+    } catch (error) {
+      console.error("API Error:", error)
+      throw error
+    }
+  }
+
+  // Load contacts from API
   const loadContacts = useCallback(async () => {
-    if (!address) return;
-    setLoading(true);
-    setError(null);
+    if (!userAddress) return
+
+    setIsLoading(true)
+    setError(null)
 
     try {
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const storageKey = `contacts_${address}`;
-      const storedContacts = localStorage.getItem(storageKey);
-
-      if (storedContacts) {
-        const parsedContacts = JSON.parse(storedContacts);
-        setContacts(parsedContacts);
-        setActiveCount(parsedContacts.filter((c) => c.isActive).length);
-      } else {
-        // Use mock data for first time
-        setContacts(mockContacts);
-        setActiveCount(mockContacts.filter((c) => c.isActive).length);
-        localStorage.setItem(storageKey, JSON.stringify(mockContacts));
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to load contacts";
-      setError(errorMessage);
-      toast.error(errorMessage);
+      const response = await makeRequest(`${BASE_URL}?savedBy=${userAddress}`)
+      setContacts(response.data || [])
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to load contacts")
+      console.error("Error loading contacts:", error)
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
-  }, [address]);
+  }, [userAddress])
 
-  // Save contacts to localStorage
-  const saveContactsToStorage = useCallback(
-    (updatedContacts) => {
-      if (!address) return;
-      const storageKey = `contacts_${address}`;
-      localStorage.setItem(storageKey, JSON.stringify(updatedContacts));
-    },
-    [address]
-  );
+  // Create a new contact
+  const createContact = async (contactData) => {
+    if (!userAddress) throw new Error("User address is required")
 
-  // Create new contact
-  const createContact = useCallback(
-    async (contactData) => {
-      setLoading(true);
-      setError(null);
+    setIsLoading(true)
+    setError(null)
 
-      if (!address) {
-        toast.error("Wallet not connected");
-        throw new Error("Wallet not connected");
+    try {
+      const newContact = {
+        ...contactData,
+        savedBy: userAddress,
+        isActive: true,
       }
 
-      try {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 300));
+      const response = await makeRequest(`${BASE_URL}`, {
+        method: "POST",
+        body: JSON.stringify(newContact),
+      })
 
-        const newContact = {
-          _id: Date.now().toString(),
-          fullName: contactData.fullName || contactData.name,
-          walletAddress: contactData.walletAddress || contactData.address,
-          email: contactData.email || "",
-          label: contactData.label || "",
-          isActive: true,
-          createdAt: new Date().toISOString(),
-        };
-
-        const updatedContacts = [...contacts, newContact];
-        setContacts(updatedContacts);
-        setActiveCount((prev) => prev + 1);
-        saveContactsToStorage(updatedContacts);
-
-        toast.success("Contact created successfully");
-        return newContact;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to create contact";
-        setError(errorMessage);
-        toast.error(errorMessage);
-        throw err;
-      } finally {
-        setLoading(false);
+      if (response.success && response.data) {
+        setContacts((prev) => [...prev, response.data])
+        return response.data
+      } else {
+        throw new Error(response.message || "Failed to create contact")
       }
-    },
-    [address, contacts, saveContactsToStorage]
-  );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to create contact")
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-  // Update contact
-  const updateContact = useCallback(
-    async (id, contactData) => {
-      setLoading(true);
-      setError(null);
+  // Update an existing contact
+  const updateContact = async (
+    contactId,
+    contactData
+  ) => {
+    if (!userAddress) throw new Error("User address is required")
 
-      try {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 300));
+    setIsLoading(true)
+    setError(null)
 
-        const updatedContact = {
-          _id: id,
-          fullName: contactData.fullName || contactData.name,
-          walletAddress: contactData.walletAddress || contactData.address,
-          email: contactData.email || "",
-          label: contactData.label || "",
-          isActive:
-            contactData.isActive !== undefined ? contactData.isActive : true,
-          createdAt:
-            contacts.find((c) => c._id === id)?.createdAt ||
-            new Date().toISOString(),
-        };
-
-        const updatedContacts = contacts.map((contact) =>
-          contact._id === id ? updatedContact : contact
-        );
-
-        setContacts(updatedContacts);
-        saveContactsToStorage(updatedContacts);
-
-        toast.success("Contact updated successfully");
-        return updatedContact;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to update contact";
-        setError(errorMessage);
-        toast.error(errorMessage);
-        throw err;
-      } finally {
-        setLoading(false);
+    try {
+      const updatedContact = {
+        ...contactData,
+        savedBy: userAddress,
+        isActive: true,
       }
-    },
-    [contacts, saveContactsToStorage]
-  );
 
-  // Delete contact
-  const deleteContact = useCallback(
-    async (id) => {
-      setLoading(true);
-      setError(null);
+      const response = await makeRequest(`${BASE_URL}/${contactId}`, {
+        method: "PUT",
+        body: JSON.stringify(updatedContact),
+      })
 
-      try {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        const updatedContacts = contacts.filter(
-          (contact) => contact._id !== id
-        );
-        setContacts(updatedContacts);
-        setActiveCount((prev) => Math.max(0, prev - 1));
-        saveContactsToStorage(updatedContacts);
-
-        toast.success("Contact deleted successfully");
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to delete contact";
-        setError(errorMessage);
-        toast.error(errorMessage);
-        throw err;
-      } finally {
-        setLoading(false);
+      if (response.success && response.data) {
+        setContacts((prev) =>
+          prev.map((contact) => ((contact._id || contact.id) === contactId ? response.data : contact)),
+        )
+        return response.data
+      } else {
+        throw new Error(response.message || "Failed to update contact")
       }
-    },
-    [contacts, saveContactsToStorage]
-  );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to update contact")
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Delete a contact
+  const deleteContact = async (contactId) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await makeRequest(`${BASE_URL}/${contactId}`, {
+        method: "DELETE",
+      })
+
+      if (response.success) {
+        setContacts((prev) => prev.filter((contact) => (contact._id || contact.id) !== contactId))
+        return true
+      } else {
+        throw new Error(response.message || "Failed to delete contact")
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to delete contact")
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Search contacts
-  const searchContacts = useCallback(
-    async (query) => {
-      if (!query.trim()) {
-        await loadContacts();
-        return;
-      }
+  const searchContacts = async (query) => {
+    if (!query.trim()) return contacts
 
-      setLoading(true);
-      setError(null);
+    setIsLoading(true)
+    setError(null)
 
-      try {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 200));
+    try {
+      const response = await makeRequest(`${BASE_URL}/search?q=${encodeURIComponent(query)}`)
 
-        const storageKey = `contacts_${address}`;
-        const storedContacts = localStorage.getItem(storageKey);
-        const allContacts = storedContacts
-          ? JSON.parse(storedContacts)
-          : mockContacts;
+      // Filter results to only show contacts saved by current user
+      const userContacts = (response.data || []).filter((contact) => contact.savedBy === userAddress)
 
-        const filteredContacts = allContacts.filter(
-          (contact) =>
-            contact.fullName?.toLowerCase().includes(query.toLowerCase()) ||
-            contact.walletAddress
-              ?.toLowerCase()
-              .includes(query.toLowerCase()) ||
-            contact.email?.toLowerCase().includes(query.toLowerCase()) ||
-            contact.label?.toLowerCase().includes(query.toLowerCase())
-        );
+      return userContacts
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to search contacts")
+      return []
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-        setContacts(filteredContacts);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to search contacts";
-        setError(errorMessage);
-        toast.error(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [loadContacts, address]
-  );
+  // Import contacts from CSV data
+  const importContacts = async (csvData) => {
+    if (!userAddress) throw new Error("User address is required")
 
-  // Get contact by ID
-  const getContactById = useCallback(
-    async (id) => {
-      try {
-        const contact = contacts.find((c) => c._id === id);
-        if (!contact) {
-          throw new Error("Contact not found");
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const lines = csvData.trim().split("\n")
+      const newContacts = []
+      const errors = []
+
+      for (let i = 1; i < lines.length; i++) {
+        // Skip header
+        try {
+          const values = lines[i].split(",").map((v) => v.replace(/"/g, "").trim())
+
+          if (values.length >= 2) {
+            const contact = {
+              fullName: values[0] || `Contact ${i}`,
+              walletAddress: values[1],
+              email: values[2] || "",
+              label: values[3] || "",
+              notes: values[4] || "",
+              isActive: true,
+            }
+
+            // Validate address
+            if (contact.walletAddress.startsWith("0x") && contact.walletAddress.length === 42) {
+              // Check for duplicates in existing contacts
+              const isDuplicate =
+                contacts.some((c) => c.walletAddress.toLowerCase() === contact.walletAddress.toLowerCase()) ||
+                newContacts.some((c) => c.walletAddress.toLowerCase() === contact.walletAddress.toLowerCase())
+
+              if (!isDuplicate) {
+                const createdContact = await createContact(contact)
+                newContacts.push(createdContact)
+              }
+            } else {
+              errors.push(`Line ${i + 1}: Invalid wallet address`)
+            }
+          }
+        } catch (error) {
+          errors.push(`Line ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`)
         }
-        return contact;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to get contact";
-        toast.error(errorMessage);
-        throw err;
       }
-    },
-    [contacts]
-  );
 
-  // Load contacts on mount
+      if (errors.length > 0) {
+        console.warn("Import errors:", errors)
+      }
+
+      return {
+        imported: newContacts.length,
+        errors: errors.length,
+        errorMessages: errors,
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to import contacts")
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Export contacts to CSV format
+  const exportContacts = () => {
+    const csvContent = [
+      "Name,Address,Email,Label,Notes",
+      ...contacts.map(
+        (contact) =>
+          `"${contact.fullName}","${contact.walletAddress}","${contact.email || ""}","${contact.label || ""}","${contact.notes || ""}"`,
+      ),
+    ].join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `contacts_${new Date().toISOString().split("T")[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Get contacts count
+  const getContactsCount = async () => {
+    if (!userAddress) return 0
+
+    try {
+      const response = await makeRequest(`${BASE_URL}/count/${userAddress}`)
+      return response.data?.count || 0
+    } catch (error) {
+      console.error("Error getting contacts count:", error)
+      return contacts.length
+    }
+  }
+
+  // Load contacts when user address changes
   useEffect(() => {
-    loadContacts();
-  }, [loadContacts]);
+    if (userAddress) {
+      loadContacts()
+    } else {
+      setContacts([])
+    }
+  }, [userAddress, loadContacts])
 
   return {
     contacts,
-    loading,
+    isLoading,
     error,
-    activeCount,
+    loadContacts,
     createContact,
     updateContact,
     deleteContact,
     searchContacts,
-    loadContacts,
-    getContactById,
-  };
+    importContacts,
+    exportContacts,
+    getContactsCount,
+  }
 }

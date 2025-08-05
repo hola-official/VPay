@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
 
+
 export function VPayLogo({ size = "md", variant = "default", className }) {
   const sizeClasses = {
     sm: "w-6 h-6",
@@ -132,15 +133,15 @@ export function VPayLogo({ size = "md", variant = "default", className }) {
     return (
       <div className={cn("relative", className)}>
         <div className={cn("font-black tracking-tight", textSizeClasses[size])}>
-          <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-blue-500 via-blue-500 to-cyan-500 bg-clip-text text-transparent">
             V
           </span>
-          <span className="bg-gradient-to-r from-purple-500 to-cyan-500 bg-clip-text text-transparent">Pay</span>
+          <span className="bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">Pay</span>
         </div>
         {/* Unique underline that mimics token flow */}
-        <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 opacity-60" />
+        <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-blue-500 to-cyan-500 opacity-60" />
         <div className="absolute -bottom-0.5 left-1 w-1 h-1 rounded-full bg-cyan-400 opacity-80" />
-        <div className="absolute -bottom-0.5 left-3 w-0.5 h-0.5 rounded-full bg-purple-400 opacity-60" />
+        <div className="absolute -bottom-0.5 left-3 w-0.5 h-0.5 rounded-full bg-blue-400 opacity-60" />
         <div className="absolute -bottom-0.5 right-2 w-0.5 h-0.5 rounded-full bg-blue-400 opacity-40" />
       </div>
     )

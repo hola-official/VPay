@@ -1,9 +1,8 @@
-import { ReactNode } from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { createAvatar } from "@dicebear/core";
-import { personas, pixelArt } from "@dicebear/collection";
+import { personas } from "@dicebear/collection";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 import {
   okxWallet,
@@ -31,16 +30,22 @@ const crossFiTestnet = {
   },
   blockExplorers: {
     default: {
-      name: "CrossFi Explorers",
+      name: "Xfi Scan",
       url: "https://test.xfiscan.com/",
+    },
+  },
+  contracts: {
+    multicall3: {
+      address: "0xe6F2f5f35752adc98FD0C1eB1b82DD09fC3F47A2",
+      blockCreated: 10236317,
     },
   },
 };
 
 const REOWN_CLOUD_APP_ID = import.meta.env.VITE_REOWN_CLOUD_APP_ID || "";
 
-if (REOWN_CLOUD_APP_ID) {
-  console.error("REOWN_CLOUD_APP_ID is not set");
+if (!REOWN_CLOUD_APP_ID) {
+  throw new Error("REOWN_CLOUD_APP_ID is not set");
 }
 
 const connectors = connectorsForWallets(
@@ -79,7 +84,7 @@ const config = createConfig({
 
 const DicebearPersonaAvatar = ({ address, size }) => {
   // Generate avatar using the same function from your code
-  const avatarUri = createAvatar(pixelArt, personas, {
+  const avatarUri = createAvatar(personas, {
     seed: address.toLowerCase(),
     scale: 90,
     radius: 50,
@@ -117,10 +122,6 @@ const customAvatar = ({ address, ensImage, size }) => {
 
 export const WagmiConfigProvider = ({ children }) => {
   const queryClient = new QueryClient();
-
-  if (!REOWN_CLOUD_APP_ID) {
-    console.error("REOWN_CLOUD_APP_ID is not set!");
-  }
 
   return (
     <WagmiProvider config={config}>

@@ -1,12 +1,21 @@
-import { Twitter } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Twitter, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { VPayLogo } from "@/components/ui/VPayLogo";
+import { VPayLogo } from "@/components/ui/VPay-logo";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
-export function Header() {
+export function Header({ onMenuToggle }) {
   return (
-    <header className="h-16 sm:h-20 border-b border-white/10 bg-black/20 backdrop-blur-xl sticky top-0 z-40">
+    <header className="h-16 sm:h-20 border-b border-white/10 bg-black/20 backdrop-blur-xl">
       <div className="h-full px-3 sm:px-6 flex items-center justify-between">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={onMenuToggle}
+          className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
+        >
+          <Menu className="w-5 h-5 text-gray-400" />
+        </button>
+
         <div className="flex items-center gap-2 sm:gap-4">
           <VPayLogo size="md" variant="default" />
           <div className="hidden sm:block w-px h-6 bg-white/20" />
@@ -14,11 +23,11 @@ export function Header() {
             Token Distribution
           </h2>
         </div>
+
         <div className="flex items-center gap-2 sm:gap-4">
-          <a
-            href="https://x.com/hola_officia"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to={"https://x.com/hola_officia"}
+            target={"_blank"}
             title="Dev X handle"
           >
             <Button
@@ -28,20 +37,18 @@ export function Header() {
             >
               <Twitter className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
-          </a>
-          {/* Wallet Connection - Using our custom component */}
-          <div className="scale-75 sm:scale-100 origin-right">
-            <ConnectButton
-              accountStatus={{
-                smallScreen: "avatar",
-                largeScreen: "full",
-              }}
-              showBalance={{
-                smallScreen: false,
-                largeScreen: true,
-              }}
-            />
-          </div>
+          </Link>
+
+          <ConnectButton
+            accountStatus={{
+              smallScreen: "avatar",
+              largeScreen: "full",
+            }}
+            showBalance={{
+              smallScreen: true,
+              largeScreen: true,
+            }}
+          />
         </div>
       </div>
     </header>
