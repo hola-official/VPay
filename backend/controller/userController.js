@@ -32,11 +32,20 @@ const createWorker = async (req, res) => {
     }
 
     // Check if worker with wallet address already exists
-    const existingWorker = await Worker.findOne({ walletAddress });
-    if (existingWorker) {
+    const existingWorkerByWallet = await Worker.findOne({ walletAddress });
+    if (existingWorkerByWallet) {
       return res.status(409).json({
         success: false,
         message: "Worker with this wallet address already exists",
+      });
+    }
+
+    // Check if worker with email already exists
+    const existingWorkerByEmail = await Worker.findOne({ email });
+    if (existingWorkerByEmail) {
+      return res.status(409).json({
+        success: false,
+        message: "Worker with this email address already exists",
       });
     }
 

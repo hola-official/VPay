@@ -39,12 +39,12 @@ export function Sidebar({ isOpen, onClose }) {
       icon: BriefcaseBusiness,
       description: "Create payroll vesting for your workers",
     },
-    {
-      path: "/contact",
-      label: "Contact",
-      icon: Contact,
-      description: "Manage contact information",
-    },
+    // {
+    //   path: "/contact",
+    //   label: "Contact",
+    //   icon: Contact,
+    //   description: "Manage contact information",
+    // },
     {
       path: "/token-lock",
       label: "Token Locks",

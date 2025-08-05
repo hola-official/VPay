@@ -1,12 +1,12 @@
 import TokenLockNav from "@/components/TokenLockNav";
-import TokenLockForm from "./components/ContactPage"
+import ContactPage from "./components/ContactPage";
 
-export default function ContactPage() {
+export default function Contact() {
   return (
-    <main className="min-h-screen text-white p-4 md:p-8">
+    <main className="min-h-screen text-white">
       <div className="container mx-auto">
         {/* <TokenLockNav /> */}
-        <TokenLockForm />
+        <ContactPage />
       </div>
     </main>
   );

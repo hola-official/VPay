@@ -1,7 +1,5 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
   Users,
@@ -12,122 +10,128 @@ import {
   Settings,
   FileText,
   HelpCircle,
-  Plus,
-  Minus,
-} from "lucide-react"
+} from "lucide-react";
 import {
   useVestingManager,
   UnlockSchedule,
   CancelPermission,
   ChangeRecipientPermission,
-} from "@/hooks/useVestingManager"
-import { useTokenInfo } from "@/hooks/useTokenInfo"
-import { useAccount } from "wagmi"
-import { formatUnits } from "viem"
-import ContactSelector from "@/components/ContactSelector"
+} from "@/hooks/useVestingManager";
+import { useTokenInfo } from "@/hooks/useTokenInfo";
+import { useAccount } from "wagmi";
+import { formatUnits } from "viem";
 
 export default function VestingManagerForm() {
-  const { address } = useAccount()
-  const [activeTab, setActiveTab] = useState("single") // 'single', 'multiple', 'dashboard'
-  const [showHelp, setShowHelp] = useState(false)
+  const { address } = useAccount();
+  const [activeTab, setActiveTab] = useState("single"); // 'single', 'multiple', 'dashboard'
+  const [showHelp, setShowHelp] = useState(false);
 
   // Token selection state
-  const [tokenAddress, setTokenAddress] = useState("")
-  const [tokenSelection, setTokenSelection] = useState("custom")
+  const [tokenAddress, setTokenAddress] = useState("");
+  const [tokenSelection, setTokenSelection] = useState("custom");
   const [predefinedTokens] = useState({
     usdt: {
       address: "0xC9592d8D3AA150d62E9638C5588264abFc5D9976",
       name: "Tether USD",
       symbol: "USDT",
-      icon: "/usdt.png",
     },
     usdc: {
       address: "0xae6c13C19ff16110BAD54E54280ec1014994631f",
       name: "USD Coin",
       symbol: "USDC",
-      icon: "/usdc.png",
     },
-  })
+  });
 
   // Single schedule state
-  const [recipient, setRecipient] = useState("")
-  const [amount, setAmount] = useState("")
-  const [startTime, setStartTime] = useState("")
-  const [endTime, setEndTime] = useState("")
-  const [unlockSchedule, setUnlockSchedule] = useState(UnlockSchedule.DAILY)
-  const [autoClaim, setAutoClaim] = useState(false)
-  const [contractTitle, setContractTitle] = useState("")
-  const [recipientEmail, setRecipientEmail] = useState("")
-  const [cancelPermission, setCancelPermission] = useState(CancelPermission.BOTH)
-  const [changeRecipientPermission, setChangeRecipientPermission] = useState(ChangeRecipientPermission.BOTH)
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [unlockSchedule, setUnlockSchedule] = useState(UnlockSchedule.DAILY);
+  const [autoClaim, setAutoClaim] = useState(false);
+  const [contractTitle, setContractTitle] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [cancelPermission, setCancelPermission] = useState(
+    CancelPermission.BOTH
+  );
+  const [changeRecipientPermission, setChangeRecipientPermission] = useState(
+    ChangeRecipientPermission.BOTH
+  );
 
   // Multiple schedules state
-  const [recipients, setRecipients] = useState([{ address: "", amount: "", title: "", email: "", error: "" }])
-  const [csvInput, setCsvInput] = useState("")
-  const [showCsvInput, setShowCsvInput] = useState(false)
+  const [recipients, setRecipients] = useState([
+    { address: "", amount: "", title: "", email: "", error: "" },
+  ]);
+  const [csvInput, setCsvInput] = useState("");
+  const [showCsvInput, setShowCsvInput] = useState(false);
 
   // Dashboard state
   const [userSchedules, setUserSchedules] = useState({
     recipientSchedules: [],
     senderSchedules: [],
-  })
-  const [detailedSchedules, setDetailedSchedules] = useState([])
-  const [loadingSchedules, setLoadingSchedules] = useState(false)
-  const [selectedSchedule, setSelectedSchedule] = useState(null)
-  const [showScheduleModal, setShowScheduleModal] = useState(false)
+  });
+  const [detailedSchedules, setDetailedSchedules] = useState([]);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   // Validation states
-  const [errors, setErrors] = useState({})
-  const [showTooltip, setShowTooltip] = useState("")
+  const [errors, setErrors] = useState({});
+  const [showTooltip, setShowTooltip] = useState("");
 
   // Hook instances
-  const vestingManager = useVestingManager()
-  const { tokenInfo, isLoadingToken, tokenError, fetchTokenInfo } = useTokenInfo(tokenAddress, address)
+  const vestingManager = useVestingManager();
+  const { tokenInfo, isLoadingToken, tokenError, fetchTokenInfo } =
+    useTokenInfo(tokenAddress, address);
 
   // Set minimum dates
-  const now = new Date()
-  now.setMinutes(now.getMinutes() + 5) // 5 minutes from now
-  const minDateTime = now.toISOString().slice(0, 16)
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 5); // 5 minutes from now
+  const minDateTime = now.toISOString().slice(0, 16);
 
   // Fetch token info when address changes
   useEffect(() => {
     if (tokenAddress && tokenAddress.length === 42) {
-      fetchTokenInfo()
+      fetchTokenInfo();
     }
-  }, [tokenAddress, fetchTokenInfo])
+  }, [tokenAddress, fetchTokenInfo]);
 
   // Load user schedules when dashboard tab is active
   useEffect(() => {
     if (activeTab === "dashboard" && address) {
-      loadUserSchedules()
+      loadUserSchedules();
     }
-  }, [activeTab, address])
+  }, [activeTab, address]);
 
   const loadUserSchedules = async () => {
-    setLoadingSchedules(true)
+    setLoadingSchedules(true);
     try {
-      const schedules = await vestingManager.getUserSchedules()
-      setUserSchedules(schedules)
+      const schedules = await vestingManager.getUserSchedules();
+      setUserSchedules(schedules);
 
       // Get detailed info for all schedules
-      const allScheduleIds = [...schedules.recipientSchedules, ...schedules.senderSchedules]
+      const allScheduleIds = [
+        ...schedules.recipientSchedules,
+        ...schedules.senderSchedules,
+      ];
       if (allScheduleIds.length > 0) {
-        const detailed = await vestingManager.getDetailedScheduleInfo(allScheduleIds)
-        setDetailedSchedules(detailed)
+        const detailed =
+          await vestingManager.getDetailedScheduleInfo(allScheduleIds);
+        setDetailedSchedules(detailed);
       }
     } catch (error) {
-      console.error("Error loading schedules:", error)
+      console.error("Error loading schedules:", error);
     } finally {
-      setLoadingSchedules(false)
+      setLoadingSchedules(false);
     }
-  }
+  };
 
   const handleTokenAddressChange = (e) => {
-    const value = e.target.value
-    setTokenAddress(value)
+    const value = e.target.value;
+    setTokenAddress(value);
 
     if (tokenSelection !== "custom") {
-      setTokenSelection("custom")
+      setTokenSelection("custom");
     }
 
     // Validate address
@@ -135,44 +139,49 @@ export default function VestingManagerForm() {
       setErrors((prev) => ({
         ...prev,
         tokenAddress: "Address must start with 0x",
-      }))
+      }));
     } else if (value && value.length !== 42) {
       setErrors((prev) => ({
         ...prev,
         tokenAddress: "Address must be 42 characters long",
-      }))
+      }));
     } else {
-      setErrors((prev) => ({ ...prev, tokenAddress: "" }))
+      setErrors((prev) => ({ ...prev, tokenAddress: "" }));
     }
-  }
+  };
 
   const validateSingleSchedule = () => {
-    const newErrors = {}
+    const newErrors = {};
 
-    if (!tokenAddress) newErrors.tokenAddress = "Token address is required"
-    if (!recipient) newErrors.recipient = "Recipient address is required"
-    if (!amount || Number.parseFloat(amount) <= 0) newErrors.amount = "Valid amount is required"
-    if (!startTime) newErrors.startTime = "Start time is required"
-    if (!endTime) newErrors.endTime = "End time is required"
+    if (!tokenAddress) newErrors.tokenAddress = "Token address is required";
+    if (!recipient) newErrors.recipient = "Recipient address is required";
+    if (!amount || Number.parseFloat(amount) <= 0)
+      newErrors.amount = "Valid amount is required";
+    if (!startTime) newErrors.startTime = "Start time is required";
+    if (!endTime) newErrors.endTime = "End time is required";
 
     if (startTime && new Date(startTime).getTime() <= Date.now()) {
-      newErrors.startTime = "Start time must be in the future"
+      newErrors.startTime = "Start time must be in the future";
     }
 
-    if (startTime && endTime && new Date(endTime).getTime() <= new Date(startTime).getTime()) {
-      newErrors.endTime = "End time must be after start time"
+    if (
+      startTime &&
+      endTime &&
+      new Date(endTime).getTime() <= new Date(startTime).getTime()
+    ) {
+      newErrors.endTime = "End time must be after start time";
     }
 
     if (recipient && (!recipient.startsWith("0x") || recipient.length !== 42)) {
-      newErrors.recipient = "Invalid recipient address"
+      newErrors.recipient = "Invalid recipient address";
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleCreateSingleSchedule = async () => {
-    if (!validateSingleSchedule()) return
+    if (!validateSingleSchedule()) return;
 
     try {
       const result = await vestingManager.performVestingScheduleCreation(
@@ -189,34 +198,36 @@ export default function VestingManagerForm() {
           recipientEmail,
           cancelPermission,
           changeRecipientPermission,
-        },
-      )
+        }
+      );
 
       if (result.success) {
         // Reset form
-        setRecipient("")
-        setAmount("")
-        setStartTime("")
-        setEndTime("")
-        setContractTitle("")
-        setRecipientEmail("")
+        setRecipient("");
+        setAmount("");
+        setStartTime("");
+        setEndTime("");
+        setContractTitle("");
+        setRecipientEmail("");
       }
     } catch (error) {
-      console.error("Error creating schedule:", error)
+      console.error("Error creating schedule:", error);
     }
-  }
+  };
 
   const handleCreateMultipleSchedules = async () => {
-    if (!tokenAddress || recipients.length === 0) return
+    if (!tokenAddress || recipients.length === 0) return;
 
-    const validRecipients = recipients.filter((r) => r.address && r.amount && !r.error)
-    if (validRecipients.length === 0) return
+    const validRecipients = recipients.filter(
+      (r) => r.address && r.amount && !r.error
+    );
+    if (validRecipients.length === 0) return;
 
     try {
-      const addresses = validRecipients.map((r) => r.address)
-      const amounts = validRecipients.map((r) => r.amount)
-      const titles = validRecipients.map((r) => r.title || "")
-      const emails = validRecipients.map((r) => r.email || "")
+      const addresses = validRecipients.map((r) => r.address);
+      const amounts = validRecipients.map((r) => r.amount);
+      const titles = validRecipients.map((r) => r.title || "");
+      const emails = validRecipients.map((r) => r.email || "");
 
       const hash = await vestingManager.createMultipleVestingSchedules(
         tokenAddress,
@@ -230,141 +241,123 @@ export default function VestingManagerForm() {
         titles,
         emails,
         cancelPermission,
-        changeRecipientPermission,
-      )
+        changeRecipientPermission
+      );
 
       if (hash) {
         // Reset form
-        setRecipients([{ address: "", amount: "", title: "", email: "", error: "" }])
-        setStartTime("")
-        setEndTime("")
+        setRecipients([
+          { address: "", amount: "", title: "", email: "", error: "" },
+        ]);
+        setStartTime("");
+        setEndTime("");
       }
     } catch (error) {
-      console.error("Error creating multiple schedules:", error)
+      console.error("Error creating multiple schedules:", error);
     }
-  }
+  };
 
   const addRecipient = () => {
-    setRecipients([...recipients, { address: "", amount: "", title: "", email: "", error: "" }])
-  }
+    setRecipients([
+      ...recipients,
+      { address: "", amount: "", title: "", email: "", error: "" },
+    ]);
+  };
 
   const removeRecipient = (index) => {
     if (recipients.length > 1) {
-      setRecipients(recipients.filter((_, i) => i !== index))
+      setRecipients(recipients.filter((_, i) => i !== index));
     }
-  }
+  };
 
   const updateRecipient = (index, field, value) => {
-    const newRecipients = [...recipients]
-    newRecipients[index][field] = value
+    const newRecipients = [...recipients];
+    newRecipients[index][field] = value;
 
     // Validate
     if (field === "address") {
       if (value && (!value.startsWith("0x") || value.length !== 42)) {
-        newRecipients[index].error = "Invalid address format"
+        newRecipients[index].error = "Invalid address format";
       } else {
-        newRecipients[index].error = ""
+        newRecipients[index].error = "";
       }
     } else if (field === "amount") {
       if (value && (isNaN(Number(value)) || Number(value) <= 0)) {
-        newRecipients[index].error = "Invalid amount"
+        newRecipients[index].error = "Invalid amount";
       } else {
-        newRecipients[index].error = ""
+        newRecipients[index].error = "";
       }
     }
 
-    setRecipients(newRecipients)
-  }
+    setRecipients(newRecipients);
+  };
 
   const parseCsvInput = () => {
     try {
-      const lines = csvInput.trim().split("\n")
+      const lines = csvInput.trim().split("\n");
       const newRecipients = lines
         .map((line) => {
-          const [address, amount, title = "", email = ""] = line.split(",").map((s) => s.trim())
+          const [address, amount, title = "", email = ""] = line
+            .split(",")
+            .map((s) => s.trim());
           return {
             address: address || "",
             amount: amount || "",
             title,
             email,
             error: "",
-          }
+          };
         })
-        .filter((r) => r.address || r.amount)
+        .filter((r) => r.address || r.amount);
 
       if (newRecipients.length > 0) {
-        setRecipients(newRecipients)
-        setCsvInput("")
-        setShowCsvInput(false)
+        setRecipients(newRecipients);
+        setCsvInput("");
+        setShowCsvInput(false);
       }
     } catch (error) {
-      console.error("Error parsing CSV:", error)
+      console.error("Error parsing CSV:", error);
     }
-  }
+  };
 
   const formatScheduleTime = (timestamp) => {
-    return new Date(Number(timestamp) * 1000).toLocaleString()
-  }
+    return new Date(Number(timestamp) * 1000).toLocaleString();
+  };
 
   const formatAmount = (amount, decimals) => {
-    try {
-      return Number(formatUnits(BigInt(amount), decimals)).toLocaleString()
-    } catch (error) {
-      return Number(amount).toLocaleString()
-    }
-  }
+    return Number(formatUnits(BigInt(amount), decimals)).toLocaleString();
+  };
 
   const getScheduleProgress = (schedule) => {
-    const now = Date.now() / 1000
-    const start = Number(schedule.startTime)
-    const end = Number(schedule.endTime)
+    const now = Date.now() / 1000;
+    const start = Number(schedule.startTime);
+    const end = Number(schedule.endTime);
 
-    if (now < start) return 0
-    if (now >= end) return 100
+    if (now < start) return 0;
+    if (now >= end) return 100;
 
-    return ((now - start) / (end - start)) * 100
-  }
+    return ((now - start) / (end - start)) * 100;
+  };
 
   const handleReleaseTokens = async (scheduleId) => {
     try {
-      await vestingManager.releaseTokens(scheduleId)
+      await vestingManager.releaseTokens(scheduleId);
       // Refresh schedules
-      loadUserSchedules()
+      loadUserSchedules();
     } catch (error) {
-      console.error("Error releasing tokens:", error)
+      console.error("Error releasing tokens:", error);
     }
-  }
+  };
 
   const handleCancelSchedule = async (scheduleId) => {
     try {
-      await vestingManager.cancelVestingSchedule(scheduleId)
+      await vestingManager.cancelVestingSchedule(scheduleId);
       // Refresh schedules
-      loadUserSchedules()
+      loadUserSchedules();
     } catch (error) {
-      console.error("Error cancelling schedule:", error)
+      console.error("Error cancelling schedule:", error);
     }
-  }
-
-  // Handle contact selection for single recipient
-  const handleSingleContactSelect = (contact) => {
-    setRecipient(contact.walletAddress)
-    if (contact.email) {
-      setRecipientEmail(contact.email)
-    }
-    if (contact.fullName && !contractTitle) {
-      setContractTitle(`Vesting for ${contact.fullName}`)
-    }
-  }
-
-  // Handle contact selection for multiple recipients
-  const handleMultipleContactSelect = (contact, index) => {
-    const newRecipients = [...recipients]
-    newRecipients[index].address = contact.walletAddress
-    newRecipients[index].email = contact.email || ""
-    newRecipients[index].title = contact.fullName
-    newRecipients[index].error = ""
-    setRecipients(newRecipients)
-  }
+  };
 
   return (
     <div className="w-full max-w-6xl mx-auto">
@@ -378,8 +371,12 @@ export default function VestingManagerForm() {
             <BarChart3 className="w-6 h-6 text-white" />
           </motion.div>
           <div>
-            <h1 className="text-2xl font-bold text-[#97CBDC]">Vesting Manager</h1>
-            <p className="text-[#97CBDC]/70">Create and manage token vesting schedules</p>
+            <h1 className="text-2xl font-bold text-[#97CBDC]">
+              Vesting Manager
+            </h1>
+            <p className="text-[#97CBDC]/70">
+              Create and manage token vesting schedules
+            </p>
           </div>
         </div>
         <button
@@ -400,25 +397,33 @@ export default function VestingManagerForm() {
             exit={{ opacity: 0, height: 0 }}
             className="mb-6 p-4 rounded-xl bg-[#0a0a20]/80 border border-[#475B74]/50 overflow-hidden"
           >
-            <h3 className="text-lg font-medium text-[#97CBDC] mb-2">Vesting Schedules</h3>
+            <h3 className="text-lg font-medium text-[#97CBDC] mb-2">
+              Vesting Schedules
+            </h3>
             <div className="grid md:grid-cols-3 gap-4">
               <div className="p-3 rounded-lg bg-[#1D2538]/50 border border-[#475B74]/30">
-                <h4 className="font-medium text-[#97CBDC] mb-2">Single Schedule</h4>
+                <h4 className="font-medium text-[#97CBDC] mb-2">
+                  Single Schedule
+                </h4>
                 <p className="text-sm text-[#97CBDC]/80">
-                  Create a vesting schedule for one recipient with customizable unlock intervals and permissions.
+                  Create a vesting schedule for one recipient with customizable
+                  unlock intervals and permissions.
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-[#1D2538]/50 border border-[#475B74]/30">
-                <h4 className="font-medium text-[#97CBDC] mb-2">Multiple Schedules</h4>
+                <h4 className="font-medium text-[#97CBDC] mb-2">
+                  Multiple Schedules
+                </h4>
                 <p className="text-sm text-[#97CBDC]/80">
-                  Create multiple vesting schedules at once with the same parameters but different recipients and
-                  amounts.
+                  Create multiple vesting schedules at once with the same
+                  parameters but different recipients and amounts.
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-[#1D2538]/50 border border-[#475B74]/30">
                 <h4 className="font-medium text-[#97CBDC] mb-2">Dashboard</h4>
                 <p className="text-sm text-[#97CBDC]/80">
-                  View and manage all your vesting schedules, release tokens, and track progress.
+                  View and manage all your vesting schedules, release tokens,
+                  and track progress.
                 </p>
               </div>
             </div>
@@ -431,7 +436,9 @@ export default function VestingManagerForm() {
         <motion.button
           onClick={() => setActiveTab("single")}
           className={`flex items-center gap-2 px-4 py-3 rounded-lg flex-1 ${
-            activeTab === "single" ? "bg-[#1D2538] text-[#97CBDC] shadow-lg" : "text-[#97CBDC]/70 hover:bg-[#1D2538]/30"
+            activeTab === "single"
+              ? "bg-[#1D2538] text-[#97CBDC] shadow-lg"
+              : "text-[#97CBDC]/70 hover:bg-[#1D2538]/30"
           } transition-all`}
         >
           <FileText className="w-5 h-5" />
@@ -506,7 +513,6 @@ export default function VestingManagerForm() {
               onChangeRecipientPermissionChange={setChangeRecipientPermission}
               onShowTooltip={setShowTooltip}
               onCreateSchedule={handleCreateSingleSchedule}
-              onContactSelect={handleSingleContactSelect}
             />
           </motion.div>
         )}
@@ -552,7 +558,6 @@ export default function VestingManagerForm() {
               onShowCsvInputChange={setShowCsvInput}
               onParseCsvInput={parseCsvInput}
               onCreateSchedules={handleCreateMultipleSchedules}
-              onContactSelect={handleMultipleContactSelect}
             />
           </motion.div>
         )}
@@ -585,7 +590,7 @@ export default function VestingManagerForm() {
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }
 
 // Single Schedule Form Component
@@ -624,7 +629,6 @@ function SingleScheduleForm({
   onChangeRecipientPermissionChange,
   onShowTooltip,
   onCreateSchedule,
-  onContactSelect,
 }) {
   return (
     <div className="p-6 rounded-3xl border border-[#475B74]/50 bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] shadow-lg space-y-6">
@@ -644,8 +648,8 @@ function SingleScheduleForm({
                   : "border-[#475B74]/50 bg-[#0a0a20]/50 hover:border-[#018ABD]/50"
               }`}
               onClick={() => {
-                onTokenSelectionChange(key)
-                onTokenAddressChange({ target: { value: token.address } })
+                onTokenSelectionChange(key);
+                onTokenAddressChange({ target: { value: token.address } });
               }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -660,10 +664,16 @@ function SingleScheduleForm({
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <img src={token.icon || "/placeholder.svg"} alt={token.symbol} className="w-8 h-8" />
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#26A17B] to-[#26A17B] flex items-center justify-center text-white text-xs font-bold">
+                      {token.symbol[0]}
+                    </div>
                     <div>
-                      <div className="text-sm font-medium text-[#97CBDC]">{token.symbol}</div>
-                      <div className="text-xs text-[#97CBDC]/70">{token.name}</div>
+                      <div className="text-sm font-medium text-[#97CBDC]">
+                        {token.symbol}
+                      </div>
+                      <div className="text-xs text-[#97CBDC]/70">
+                        {token.name}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -678,8 +688,8 @@ function SingleScheduleForm({
                 : "border-[#475B74]/50 bg-[#0a0a20]/50 hover:border-[#018ABD]/50"
             }`}
             onClick={() => {
-              onTokenSelectionChange("custom")
-              onTokenAddressChange({ target: { value: "" } })
+              onTokenSelectionChange("custom");
+              onTokenAddressChange({ target: { value: "" } });
             }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -698,8 +708,12 @@ function SingleScheduleForm({
                     ?
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-[#97CBDC]">Custom Token</div>
-                    <div className="text-xs text-[#97CBDC]/70">Enter token address</div>
+                    <div className="text-sm font-medium text-[#97CBDC]">
+                      Custom Token
+                    </div>
+                    <div className="text-xs text-[#97CBDC]/70">
+                      Enter token address
+                    </div>
                   </div>
                 </div>
               </div>
@@ -722,7 +736,11 @@ function SingleScheduleForm({
                   onChange={onTokenAddressChange}
                   placeholder="0x..."
                   className={`w-full bg-[#0a0a20]/80 border ${
-                    errors.tokenAddress ? "border-red-500" : tokenInfo ? "border-green-500" : "border-[#475B74]/50"
+                    errors.tokenAddress
+                      ? "border-red-500"
+                      : tokenInfo
+                        ? "border-green-500"
+                        : "border-[#475B74]/50"
                   } rounded-xl p-3 text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50 pr-10`}
                 />
                 {isLoadingToken && (
@@ -736,8 +754,12 @@ function SingleScheduleForm({
                   </div>
                 )}
               </div>
-              {errors.tokenAddress && <p className="text-sm text-red-500">{errors.tokenAddress}</p>}
-              {tokenError && <p className="text-sm text-red-500">{tokenError}</p>}
+              {errors.tokenAddress && (
+                <p className="text-sm text-red-500">{errors.tokenAddress}</p>
+              )}
+              {tokenError && (
+                <p className="text-sm text-red-500">{tokenError}</p>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -756,7 +778,9 @@ function SingleScheduleForm({
                   {tokenInfo.symbol.slice(0, 2)}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-[#97CBDC]">{tokenInfo.name}</div>
+                  <div className="text-sm font-medium text-[#97CBDC]">
+                    {tokenInfo.name}
+                  </div>
                   <div className="text-xs text-[#97CBDC]/70">
                     {tokenInfo.symbol} • {tokenInfo.decimals} decimals
                   </div>
@@ -764,12 +788,20 @@ function SingleScheduleForm({
               </div>
               <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
                 <div className="p-2 rounded-lg bg-[#0a0a20]/50">
-                  <div className="text-[#97CBDC]/70 text-xs mb-1">Your Balance:</div>
-                  <div className="text-[#97CBDC] font-medium">{Number(tokenInfo.balance).toLocaleString()}</div>
+                  <div className="text-[#97CBDC]/70 text-xs mb-1">
+                    Your Balance:
+                  </div>
+                  <div className="text-[#97CBDC] font-medium">
+                    {Number(tokenInfo.balance).toLocaleString()}
+                  </div>
                 </div>
                 <div className="p-2 rounded-lg bg-[#0a0a20]/50">
-                  <div className="text-[#97CBDC]/70 text-xs mb-1">Total Supply:</div>
-                  <div className="text-[#97CBDC] font-medium">{Number(tokenInfo.totalSupply).toLocaleString()}</div>
+                  <div className="text-[#97CBDC]/70 text-xs mb-1">
+                    Total Supply:
+                  </div>
+                  <div className="text-[#97CBDC] font-medium">
+                    {Number(tokenInfo.totalSupply).toLocaleString()}
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -783,23 +815,21 @@ function SingleScheduleForm({
           <label className="block text-sm font-medium text-[#97CBDC]">
             Recipient Address <span className="text-red-500">*</span>
           </label>
-          <div className="space-y-2">
-            <ContactSelector
-              onSelect={onContactSelect}
-              placeholder="Search contacts or enter address..."
-              showEmail={true}
-              showLabel={true}
-            />
-            <input
-              value={recipient}
-              onChange={(e) => onRecipientChange(e.target.value)}
-              placeholder="0x... or use contact selector above"
-              className={`w-full bg-[#0a0a20]/80 border ${
-                errors.recipient ? "border-red-500" : recipient ? "border-[#018ABD]" : "border-[#475B74]/50"
-              } rounded-xl p-3 text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50`}
-            />
-          </div>
-          {errors.recipient && <p className="text-sm text-red-500">{errors.recipient}</p>}
+          <input
+            value={recipient}
+            onChange={(e) => onRecipientChange(e.target.value)}
+            placeholder="0x..."
+            className={`w-full bg-[#0a0a20]/80 border ${
+              errors.recipient
+                ? "border-red-500"
+                : recipient
+                  ? "border-[#018ABD]"
+                  : "border-[#475B74]/50"
+            } rounded-xl p-3 text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50`}
+          />
+          {errors.recipient && (
+            <p className="text-sm text-red-500">{errors.recipient}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -823,7 +853,11 @@ function SingleScheduleForm({
               onChange={(e) => onAmountChange(e.target.value)}
               placeholder="100000"
               className={`w-full bg-[#0a0a20]/80 border ${
-                errors.amount ? "border-red-500" : amount ? "border-[#018ABD]" : "border-[#475B74]/50"
+                errors.amount
+                  ? "border-red-500"
+                  : amount
+                    ? "border-[#018ABD]"
+                    : "border-[#475B74]/50"
               } rounded-xl p-3 text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50`}
             />
             {tokenInfo && amount && !errors.amount && (
@@ -832,7 +866,9 @@ function SingleScheduleForm({
               </div>
             )}
           </div>
-          {errors.amount && <p className="text-sm text-red-500">{errors.amount}</p>}
+          {errors.amount && (
+            <p className="text-sm text-red-500">{errors.amount}</p>
+          )}
         </div>
       </div>
 
@@ -849,12 +885,18 @@ function SingleScheduleForm({
               onChange={(e) => onStartTimeChange(e.target.value)}
               min={minDateTime}
               className={`w-full bg-[#0a0a20]/80 border ${
-                errors.startTime ? "border-red-500" : startTime ? "border-[#018ABD]" : "border-[#475B74]/50"
+                errors.startTime
+                  ? "border-red-500"
+                  : startTime
+                    ? "border-[#018ABD]"
+                    : "border-[#475B74]/50"
               } rounded-xl p-3 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50 pr-10`}
             />
             <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#97CBDC]/70 w-5 h-5" />
           </div>
-          {errors.startTime && <p className="text-sm text-red-500">{errors.startTime}</p>}
+          {errors.startTime && (
+            <p className="text-sm text-red-500">{errors.startTime}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -868,12 +910,18 @@ function SingleScheduleForm({
               onChange={(e) => onEndTimeChange(e.target.value)}
               min={startTime || minDateTime}
               className={`w-full bg-[#0a0a20]/80 border ${
-                errors.endTime ? "border-red-500" : endTime ? "border-[#018ABD]" : "border-[#475B74]/50"
+                errors.endTime
+                  ? "border-red-500"
+                  : endTime
+                    ? "border-[#018ABD]"
+                    : "border-[#475B74]/50"
               } rounded-xl p-3 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50 pr-10`}
             />
             <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#97CBDC]/70 w-5 h-5" />
           </div>
-          {errors.endTime && <p className="text-sm text-red-500">{errors.endTime}</p>}
+          {errors.endTime && (
+            <p className="text-sm text-red-500">{errors.endTime}</p>
+          )}
         </div>
       </div>
 
@@ -936,7 +984,8 @@ function SingleScheduleForm({
                     exit={{ opacity: 0, y: 10 }}
                     className="absolute left-0 z-10 w-64 p-3 text-xs bg-[#0a0a20] border border-[#475B74]/50 rounded-xl shadow-lg text-[#97CBDC]/90"
                   >
-                    When enabled, tokens will be automatically released to the recipient according to the schedule.
+                    When enabled, tokens will be automatically released to the
+                    recipient according to the schedule.
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -945,7 +994,9 @@ function SingleScheduleForm({
 
           {/* Contract Title */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-[#97CBDC]">Contract Title</label>
+            <label className="block text-sm font-medium text-[#97CBDC]">
+              Contract Title
+            </label>
             <input
               value={contractTitle}
               onChange={(e) => onContractTitleChange(e.target.value)}
@@ -956,7 +1007,9 @@ function SingleScheduleForm({
 
           {/* Recipient Email */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-[#97CBDC]">Recipient Email</label>
+            <label className="block text-sm font-medium text-[#97CBDC]">
+              Recipient Email
+            </label>
             <input
               type="email"
               value={recipientEmail}
@@ -969,29 +1022,45 @@ function SingleScheduleForm({
           {/* Permissions */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#97CBDC]">Cancel Permission</label>
+              <label className="block text-sm font-medium text-[#97CBDC]">
+                Cancel Permission
+              </label>
               <select
                 value={cancelPermission}
-                onChange={(e) => onCancelPermissionChange(Number(e.target.value))}
+                onChange={(e) =>
+                  onCancelPermissionChange(Number(e.target.value))
+                }
                 className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl p-3 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
               >
                 <option value={CancelPermission.NONE}>None</option>
-                <option value={CancelPermission.SENDER_ONLY}>Sender Only</option>
-                <option value={CancelPermission.RECIPIENT_ONLY}>Recipient Only</option>
+                <option value={CancelPermission.SENDER_ONLY}>
+                  Sender Only
+                </option>
+                <option value={CancelPermission.RECIPIENT_ONLY}>
+                  Recipient Only
+                </option>
                 <option value={CancelPermission.BOTH}>Both</option>
               </select>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#97CBDC]">Change Recipient Permission</label>
+              <label className="block text-sm font-medium text-[#97CBDC]">
+                Change Recipient Permission
+              </label>
               <select
                 value={changeRecipientPermission}
-                onChange={(e) => onChangeRecipientPermissionChange(Number(e.target.value))}
+                onChange={(e) =>
+                  onChangeRecipientPermissionChange(Number(e.target.value))
+                }
                 className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl p-3 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
               >
                 <option value={ChangeRecipientPermission.NONE}>None</option>
-                <option value={ChangeRecipientPermission.SENDER_ONLY}>Sender Only</option>
-                <option value={ChangeRecipientPermission.RECIPIENT_ONLY}>Recipient Only</option>
+                <option value={ChangeRecipientPermission.SENDER_ONLY}>
+                  Sender Only
+                </option>
+                <option value={ChangeRecipientPermission.RECIPIENT_ONLY}>
+                  Recipient Only
+                </option>
                 <option value={ChangeRecipientPermission.BOTH}>Both</option>
               </select>
             </div>
@@ -1019,7 +1088,9 @@ function SingleScheduleForm({
           {vestingManager.isProcessing ? (
             <span className="flex items-center">
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              {vestingManager.isApproving ? "Approving..." : "Creating Schedule..."}
+              {vestingManager.isApproving
+                ? "Approving..."
+                : "Creating Schedule..."}
             </span>
           ) : (
             "Create Vesting Schedule"
@@ -1027,10 +1098,10 @@ function SingleScheduleForm({
         </motion.button>
       </div>
     </div>
-  )
+  );
 }
 
-// Multiple Schedules Form Component
+// Multiple Schedules Form Component (simplified for brevity)
 function MultipleSchedulesForm({
   tokenAddress,
   tokenSelection,
@@ -1064,14 +1135,13 @@ function MultipleSchedulesForm({
   onShowCsvInputChange,
   onParseCsvInput,
   onCreateSchedules,
-  onContactSelect,
 }) {
   const getTotalAmount = () => {
     return recipients.reduce((total, recipient) => {
-      const amount = Number(recipient.amount.replace(/,/g, "")) || 0
-      return total + amount
-    }, 0)
-  }
+      const amount = Number(recipient.amount.replace(/,/g, "")) || 0;
+      return total + amount;
+    }, 0);
+  };
 
   return (
     <div className="p-6 rounded-3xl border border-[#475B74]/50 bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] shadow-lg space-y-6">
@@ -1091,8 +1161,8 @@ function MultipleSchedulesForm({
                   : "border-[#475B74]/50 bg-[#0a0a20]/50 hover:border-[#018ABD]/50"
               }`}
               onClick={() => {
-                onTokenSelectionChange(key)
-                onTokenAddressChange({ target: { value: token.address } })
+                onTokenSelectionChange(key);
+                onTokenAddressChange({ target: { value: token.address } });
               }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -1107,10 +1177,16 @@ function MultipleSchedulesForm({
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <img src={token.icon || "/placeholder.svg"} alt={token.symbol} className="w-8 h-8" />
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#26A17B] to-[#26A17B] flex items-center justify-center text-white text-xs font-bold">
+                      {token.symbol[0]}
+                    </div>
                     <div>
-                      <div className="text-sm font-medium text-[#97CBDC]">{token.symbol}</div>
-                      <div className="text-xs text-[#97CBDC]/70">{token.name}</div>
+                      <div className="text-sm font-medium text-[#97CBDC]">
+                        {token.symbol}
+                      </div>
+                      <div className="text-xs text-[#97CBDC]/70">
+                        {token.name}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1125,8 +1201,8 @@ function MultipleSchedulesForm({
                 : "border-[#475B74]/50 bg-[#0a0a20]/50 hover:border-[#018ABD]/50"
             }`}
             onClick={() => {
-              onTokenSelectionChange("custom")
-              onTokenAddressChange({ target: { value: "" } })
+              onTokenSelectionChange("custom");
+              onTokenAddressChange({ target: { value: "" } });
             }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -1145,8 +1221,12 @@ function MultipleSchedulesForm({
                     ?
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-[#97CBDC]">Custom Token</div>
-                    <div className="text-xs text-[#97CBDC]/70">Enter token address</div>
+                    <div className="text-sm font-medium text-[#97CBDC]">
+                      Custom Token
+                    </div>
+                    <div className="text-xs text-[#97CBDC]/70">
+                      Enter token address
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1169,7 +1249,11 @@ function MultipleSchedulesForm({
                   onChange={onTokenAddressChange}
                   placeholder="0x..."
                   className={`w-full bg-[#0a0a20]/80 border ${
-                    errors.tokenAddress ? "border-red-500" : tokenInfo ? "border-green-500" : "border-[#475B74]/50"
+                    errors.tokenAddress
+                      ? "border-red-500"
+                      : tokenInfo
+                        ? "border-green-500"
+                        : "border-[#475B74]/50"
                   } rounded-xl p-3 text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50 pr-10`}
                 />
                 {isLoadingToken && (
@@ -1183,7 +1267,9 @@ function MultipleSchedulesForm({
                   </div>
                 )}
               </div>
-              {errors.tokenAddress && <p className="text-sm text-red-500">{errors.tokenAddress}</p>}
+              {errors.tokenAddress && (
+                <p className="text-sm text-red-500">{errors.tokenAddress}</p>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1202,7 +1288,9 @@ function MultipleSchedulesForm({
                   {tokenInfo.symbol.slice(0, 2)}
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-[#97CBDC]">{tokenInfo.name}</div>
+                  <div className="text-sm font-medium text-[#97CBDC]">
+                    {tokenInfo.name}
+                  </div>
                   <div className="text-xs text-[#97CBDC]/70">
                     {tokenInfo.symbol} • {tokenInfo.decimals} decimals
                   </div>
@@ -1210,12 +1298,20 @@ function MultipleSchedulesForm({
               </div>
               <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
                 <div className="p-2 rounded-lg bg-[#0a0a20]/50">
-                  <div className="text-[#97CBDC]/70 text-xs mb-1">Your Balance:</div>
-                  <div className="text-[#97CBDC] font-medium">{Number(tokenInfo.balance).toLocaleString()}</div>
+                  <div className="text-[#97CBDC]/70 text-xs mb-1">
+                    Your Balance:
+                  </div>
+                  <div className="text-[#97CBDC] font-medium">
+                    {Number(tokenInfo.balance).toLocaleString()}
+                  </div>
                 </div>
                 <div className="p-2 rounded-lg bg-[#0a0a20]/50">
-                  <div className="text-[#97CBDC]/70 text-xs mb-1">Total Supply:</div>
-                  <div className="text-[#97CBDC] font-medium">{Number(tokenInfo.totalSupply).toLocaleString()}</div>
+                  <div className="text-[#97CBDC]/70 text-xs mb-1">
+                    Total Supply:
+                  </div>
+                  <div className="text-[#97CBDC] font-medium">
+                    {Number(tokenInfo.totalSupply).toLocaleString()}
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -1236,12 +1332,18 @@ function MultipleSchedulesForm({
               onChange={(e) => onStartTimeChange(e.target.value)}
               min={minDateTime}
               className={`w-full bg-[#0a0a20]/80 border ${
-                errors.startTime ? "border-red-500" : startTime ? "border-[#018ABD]" : "border-[#475B74]/50"
+                errors.startTime
+                  ? "border-red-500"
+                  : startTime
+                    ? "border-[#018ABD]"
+                    : "border-[#475B74]/50"
               } rounded-xl p-3 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50 pr-10`}
             />
             <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#97CBDC]/70 w-5 h-5" />
           </div>
-          {errors.startTime && <p className="text-sm text-red-500">{errors.startTime}</p>}
+          {errors.startTime && (
+            <p className="text-sm text-red-500">{errors.startTime}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -1255,12 +1357,18 @@ function MultipleSchedulesForm({
               onChange={(e) => onEndTimeChange(e.target.value)}
               min={startTime || minDateTime}
               className={`w-full bg-[#0a0a20]/80 border ${
-                errors.endTime ? "border-red-500" : endTime ? "border-[#018ABD]" : "border-[#475B74]/50"
+                errors.endTime
+                  ? "border-red-500"
+                  : endTime
+                    ? "border-[#018ABD]"
+                    : "border-[#475B74]/50"
               } rounded-xl p-3 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50 pr-10`}
             />
             <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#97CBDC]/70 w-5 h-5" />
           </div>
-          {errors.endTime && <p className="text-sm text-red-500">{errors.endTime}</p>}
+          {errors.endTime && (
+            <p className="text-sm text-red-500">{errors.endTime}</p>
+          )}
         </div>
       </div>
 
@@ -1307,7 +1415,7 @@ function MultipleSchedulesForm({
               onClick={onAddRecipient}
               className="px-3 py-1.5 text-xs bg-[#018ABD]/20 border border-[#018ABD]/50 rounded-lg text-[#018ABD] hover:bg-[#018ABD]/30 transition-colors flex items-center gap-1"
             >
-              <Plus className="w-3 h-3" />
+              <Users className="w-3 h-3" />
               Add Recipient
             </button>
           </div>
@@ -1337,9 +1445,7 @@ function MultipleSchedulesForm({
               <textarea
                 value={csvInput}
                 onChange={(e) => onCsvInputChange(e.target.value)}
-                placeholder={`0x1234...abcd,1000,Team Member 1,member1@example.com
-0x5678...efgh,2000,Team Member 2,member2@example.com
-0x9abc...ijkl,1500,Team Member 3,member3@example.com`}
+                placeholder={`0x1234...abcd,1000,Team Member 1,member1@example.com\n0x5678...efgh,2000,Team Member 2,member2@example.com\n0x9abc...ijkl,1500,Team Member 3,member3@example.com`}
                 className="w-full h-20 bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-lg p-2 text-sm text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-1 focus:ring-[#018ABD]/50 resize-none"
               />
               <div className="flex justify-end mt-2">
@@ -1365,36 +1471,30 @@ function MultipleSchedulesForm({
               className="p-3 rounded-lg bg-[#0a0a20]/80 border border-[#475B74]/30"
             >
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-medium text-[#97CBDC]/70 min-w-[60px]">#{index + 1}</span>
+                <span className="text-xs font-medium text-[#97CBDC]/70 min-w-[60px]">
+                  #{index + 1}
+                </span>
                 {recipients.length > 1 && (
                   <button
                     type="button"
                     onClick={() => onRemoveRecipient(index)}
                     className="p-1 text-red-400 hover:text-red-300 transition-colors ml-auto"
                   >
-                    <Minus className="w-3 h-3" />
+                    <Users className="w-3 h-3" />
                   </button>
                 )}
               </div>
-
-              {/* Contact Selector for each recipient */}
-              <div className="mb-2">
-                <ContactSelector
-                  onSelect={(contact) => onContactSelect(contact, index)}
-                  placeholder={`Search contacts for recipient ${index + 1}...`}
-                  showEmail={true}
-                  showLabel={true}
-                  className="mb-2"
-                />
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-[#97CBDC]/70 mb-1">Address *</label>
+                  <label className="block text-xs text-[#97CBDC]/70 mb-1">
+                    Address *
+                  </label>
                   <input
                     value={recipient.address}
-                    onChange={(e) => onUpdateRecipient(index, "address", e.target.value)}
-                    placeholder="0x... or use contact selector above"
+                    onChange={(e) =>
+                      onUpdateRecipient(index, "address", e.target.value)
+                    }
+                    placeholder="0x..."
                     className={`w-full bg-[#0a0a20]/80 border ${
                       recipient.error && recipient.error.includes("address")
                         ? "border-red-500"
@@ -1405,11 +1505,15 @@ function MultipleSchedulesForm({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#97CBDC]/70 mb-1">Amount *</label>
+                  <label className="block text-xs text-[#97CBDC]/70 mb-1">
+                    Amount *
+                  </label>
                   <div className="relative">
                     <input
                       value={recipient.amount}
-                      onChange={(e) => onUpdateRecipient(index, "amount", e.target.value)}
+                      onChange={(e) =>
+                        onUpdateRecipient(index, "amount", e.target.value)
+                      }
                       placeholder="1000"
                       className={`w-full bg-[#0a0a20]/80 border ${
                         recipient.error && recipient.error.includes("amount")
@@ -1429,26 +1533,36 @@ function MultipleSchedulesForm({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
                 <div>
-                  <label className="block text-xs text-[#97CBDC]/70 mb-1">Title (Optional)</label>
+                  <label className="block text-xs text-[#97CBDC]/70 mb-1">
+                    Title (Optional)
+                  </label>
                   <input
                     value={recipient.title}
-                    onChange={(e) => onUpdateRecipient(index, "title", e.target.value)}
+                    onChange={(e) =>
+                      onUpdateRecipient(index, "title", e.target.value)
+                    }
                     placeholder="Team Member"
                     className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-lg p-2 text-sm text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-1 focus:ring-[#018ABD]/50"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#97CBDC]/70 mb-1">Email (Optional)</label>
+                  <label className="block text-xs text-[#97CBDC]/70 mb-1">
+                    Email (Optional)
+                  </label>
                   <input
                     type="email"
                     value={recipient.email}
-                    onChange={(e) => onUpdateRecipient(index, "email", e.target.value)}
+                    onChange={(e) =>
+                      onUpdateRecipient(index, "email", e.target.value)
+                    }
                     placeholder="member@example.com"
                     className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-lg p-2 text-sm text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-1 focus:ring-[#018ABD]/50"
                   />
                 </div>
               </div>
-              {recipient.error && <p className="text-xs text-red-500 mt-1">{recipient.error}</p>}
+              {recipient.error && (
+                <p className="text-xs text-red-500 mt-1">{recipient.error}</p>
+              )}
             </motion.div>
           ))}
         </div>
@@ -1459,7 +1573,8 @@ function MultipleSchedulesForm({
             <div className="flex justify-between items-center text-sm">
               <span className="text-[#97CBDC]/70">Total Amount:</span>
               <span className="text-[#97CBDC] font-medium">
-                {getTotalAmount().toLocaleString()} {tokenInfo?.symbol || "tokens"}
+                {getTotalAmount().toLocaleString()}{" "}
+                {tokenInfo?.symbol || "tokens"}
               </span>
             </div>
           </div>
@@ -1483,7 +1598,10 @@ function MultipleSchedulesForm({
               onChange={(e) => onAutoClaimChange(e.target.checked)}
               className="rounded border-[#475B74] text-[#018ABD] focus:ring-[#018ABD]/50"
             />
-            <label htmlFor="autoClaimMultiple" className="text-sm text-[#97CBDC]">
+            <label
+              htmlFor="autoClaimMultiple"
+              className="text-sm text-[#97CBDC]"
+            >
               Enable auto-claim for all schedules
             </label>
           </div>
@@ -1491,29 +1609,45 @@ function MultipleSchedulesForm({
           {/* Permissions */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#97CBDC]">Cancel Permission</label>
+              <label className="block text-sm font-medium text-[#97CBDC]">
+                Cancel Permission
+              </label>
               <select
                 value={cancelPermission}
-                onChange={(e) => onCancelPermissionChange(Number(e.target.value))}
+                onChange={(e) =>
+                  onCancelPermissionChange(Number(e.target.value))
+                }
                 className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl p-3 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
               >
                 <option value={CancelPermission.NONE}>None</option>
-                <option value={CancelPermission.SENDER_ONLY}>Sender Only</option>
-                <option value={CancelPermission.RECIPIENT_ONLY}>Recipient Only</option>
+                <option value={CancelPermission.SENDER_ONLY}>
+                  Sender Only
+                </option>
+                <option value={CancelPermission.RECIPIENT_ONLY}>
+                  Recipient Only
+                </option>
                 <option value={CancelPermission.BOTH}>Both</option>
               </select>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-[#97CBDC]">Change Recipient Permission</label>
+              <label className="block text-sm font-medium text-[#97CBDC]">
+                Change Recipient Permission
+              </label>
               <select
                 value={changeRecipientPermission}
-                onChange={(e) => onChangeRecipientPermissionChange(Number(e.target.value))}
+                onChange={(e) =>
+                  onChangeRecipientPermissionChange(Number(e.target.value))
+                }
                 className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl p-3 text-[#97CBDC] focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
               >
                 <option value={ChangeRecipientPermission.NONE}>None</option>
-                <option value={ChangeRecipientPermission.SENDER_ONLY}>Sender Only</option>
-                <option value={ChangeRecipientPermission.RECIPIENT_ONLY}>Recipient Only</option>
+                <option value={ChangeRecipientPermission.SENDER_ONLY}>
+                  Sender Only
+                </option>
+                <option value={ChangeRecipientPermission.RECIPIENT_ONLY}>
+                  Recipient Only
+                </option>
                 <option value={ChangeRecipientPermission.BOTH}>Both</option>
               </select>
             </div>
@@ -1540,7 +1674,9 @@ function MultipleSchedulesForm({
           {vestingManager.isProcessing ? (
             <span className="flex items-center">
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              {vestingManager.isApproving ? "Approving..." : "Creating Schedules..."}
+              {vestingManager.isApproving
+                ? "Approving..."
+                : "Creating Schedules..."}
             </span>
           ) : (
             `Create ${recipients.length} Vesting Schedule${recipients.length > 1 ? "s" : ""}`
@@ -1548,10 +1684,10 @@ function MultipleSchedulesForm({
         </motion.button>
       </div>
     </div>
-  )
+  );
 }
 
-// Schedules Dashboard Component (keeping the existing implementation)
+// Replace the SchedulesDashboard component with this full implementation:
 function SchedulesDashboard({
   userSchedules,
   detailedSchedules,
@@ -1568,47 +1704,63 @@ function SchedulesDashboard({
   formatAmount,
   getScheduleProgress,
 }) {
-  const [activeFilter, setActiveFilter] = useState("all")
-  const [searchTerm, setSearchTerm] = useState("")
+  const [activeFilter, setActiveFilter] = useState("all"); // 'all', 'active', 'completed', 'cancelled'
+  const [searchTerm, setSearchTerm] = useState("");
 
   const filteredSchedules = detailedSchedules.filter((schedule) => {
+    // Search filter
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
+      const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
         schedule.recipient?.toLowerCase().includes(searchLower) ||
         schedule.sender?.toLowerCase().includes(searchLower) ||
-        schedule.contractTitle?.toLowerCase().includes(searchLower)
+        schedule.contractTitle?.toLowerCase().includes(searchLower);
 
-      if (!matchesSearch) return false
+      if (!matchesSearch) return false;
     }
 
+    // Status filter
     if (activeFilter === "active") {
-      return !schedule.cancelled && getScheduleProgress(schedule) < 100
+      return !schedule.cancelled && getScheduleProgress(schedule) < 100;
     } else if (activeFilter === "completed") {
-      return !schedule.cancelled && getScheduleProgress(schedule) >= 100
+      return !schedule.cancelled && getScheduleProgress(schedule) >= 100;
     } else if (activeFilter === "cancelled") {
-      return schedule.cancelled
+      return schedule.cancelled;
     }
 
-    return true
-  })
-
-  console.log(filteredSchedules)
+    return true; // 'all'
+  });
 
   const getStatusBadge = (schedule) => {
     if (schedule.cancelled) {
-      return <span className="px-2 py-1 text-xs rounded-full bg-red-500/20 text-red-400">Cancelled</span>
+      return (
+        <span className="px-2 py-1 text-xs rounded-full bg-red-500/20 text-red-400">
+          Cancelled
+        </span>
+      );
     }
 
-    const progress = getScheduleProgress(schedule)
+    const progress = getScheduleProgress(schedule);
     if (progress >= 100) {
-      return <span className="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-400">Completed</span>
+      return (
+        <span className="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-400">
+          Completed
+        </span>
+      );
     } else if (progress > 0) {
-      return <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400">Active</span>
+      return (
+        <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400">
+          Active
+        </span>
+      );
     } else {
-      return <span className="px-2 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Pending</span>
+      return (
+        <span className="px-2 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">
+          Pending
+        </span>
+      );
     }
-  }
+  };
 
   if (loadingSchedules) {
     return (
@@ -1618,7 +1770,7 @@ function SchedulesDashboard({
           <p className="text-[#97CBDC]/70">Loading your vesting schedules...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -1626,9 +1778,12 @@ function SchedulesDashboard({
       {/* Dashboard Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-[#97CBDC]">Your Vesting Schedules</h2>
+          <h2 className="text-xl font-bold text-[#97CBDC]">
+            Your Vesting Schedules
+          </h2>
           <p className="text-[#97CBDC]/70">
-            {userSchedules.recipientSchedules.length} as recipient • {userSchedules.senderSchedules.length} as sender
+            {userSchedules.recipientSchedules.length} as recipient •{" "}
+            {userSchedules.senderSchedules.length} as sender
           </p>
         </div>
         <button
@@ -1645,9 +1800,13 @@ function SchedulesDashboard({
         <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="w-5 h-5 text-[#018ABD]" />
-            <span className="text-sm font-medium text-[#97CBDC]">Total Schedules</span>
+            <span className="text-sm font-medium text-[#97CBDC]">
+              Total Schedules
+            </span>
           </div>
-          <div className="text-2xl font-bold text-[#97CBDC]">{detailedSchedules.length}</div>
+          <div className="text-2xl font-bold text-[#97CBDC]">
+            {detailedSchedules.length}
+          </div>
         </div>
 
         <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
@@ -1656,26 +1815,40 @@ function SchedulesDashboard({
             <span className="text-sm font-medium text-[#97CBDC]">Active</span>
           </div>
           <div className="text-2xl font-bold text-[#97CBDC]">
-            {detailedSchedules.filter((s) => !s.cancelled && getScheduleProgress(s) < 100).length}
+            {
+              detailedSchedules.filter(
+                (s) => !s.cancelled && getScheduleProgress(s) < 100
+              ).length
+            }
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
           <div className="flex items-center gap-2 mb-2">
             <Calendar className="w-5 h-5 text-blue-400" />
-            <span className="text-sm font-medium text-[#97CBDC]">Completed</span>
+            <span className="text-sm font-medium text-[#97CBDC]">
+              Completed
+            </span>
           </div>
           <div className="text-2xl font-bold text-[#97CBDC]">
-            {detailedSchedules.filter((s) => !s.cancelled && getScheduleProgress(s) >= 100).length}
+            {
+              detailedSchedules.filter(
+                (s) => !s.cancelled && getScheduleProgress(s) >= 100
+              ).length
+            }
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
           <div className="flex items-center gap-2 mb-2">
             <Users className="w-5 h-5 text-red-400" />
-            <span className="text-sm font-medium text-[#97CBDC]">Cancelled</span>
+            <span className="text-sm font-medium text-[#97CBDC]">
+              Cancelled
+            </span>
           </div>
-          <div className="text-2xl font-bold text-[#97CBDC]">{detailedSchedules.filter((s) => s.cancelled).length}</div>
+          <div className="text-2xl font-bold text-[#97CBDC]">
+            {detailedSchedules.filter((s) => s.cancelled).length}
+          </div>
         </div>
       </div>
 
@@ -1712,7 +1885,9 @@ function SchedulesDashboard({
       {filteredSchedules.length === 0 ? (
         <div className="text-center py-12">
           <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50 text-[#97CBDC]" />
-          <h3 className="text-lg font-medium text-[#97CBDC] mb-2">No schedules found</h3>
+          <h3 className="text-lg font-medium text-[#97CBDC] mb-2">
+            No schedules found
+          </h3>
           <p className="text-[#97CBDC]/70">
             {detailedSchedules.length === 0
               ? "You don't have any vesting schedules yet."
@@ -1732,7 +1907,8 @@ function SchedulesDashboard({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-medium text-[#97CBDC]">
-                      {schedule.contractTitle || `Schedule #${schedule.scheduleId}`}
+                      {schedule.contractTitle ||
+                        `Schedule #${schedule.scheduleId}`}
                     </h3>
                     {getStatusBadge(schedule)}
                   </div>
@@ -1741,15 +1917,17 @@ function SchedulesDashboard({
                       Recipient: {schedule.recipient?.slice(0, 6)}...
                       {schedule.recipient?.slice(-4)}
                     </span>
-                    {schedule.recipientEmail && <span className="ml-4">• {schedule.recipientEmail}</span>}
+                    {schedule.recipientEmail && (
+                      <span className="ml-4">• {schedule.recipientEmail}</span>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      onSelectSchedule(schedule)
-                      onShowScheduleModal(true)
+                      onSelectSchedule(schedule);
+                      onShowScheduleModal(true);
                     }}
                     className="px-3 py-1.5 text-xs bg-[#018ABD]/20 border border-[#018ABD]/50 rounded-lg text-[#018ABD] hover:bg-[#018ABD]/30 transition-colors"
                   >
@@ -1762,7 +1940,11 @@ function SchedulesDashboard({
                       disabled={vestingManager.isProcessing}
                       className="px-3 py-1.5 text-xs bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50"
                     >
-                      {vestingManager.isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : "Release"}
+                      {vestingManager.isProcessing ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        "Release"
+                      )}
                     </button>
                   )}
                 </div>
@@ -1772,27 +1954,38 @@ function SchedulesDashboard({
                 <div>
                   <div className="text-[#97CBDC]/70 mb-1">Total Amount</div>
                   <div className="text-[#97CBDC] font-medium">
-                    {formatAmount(schedule.totalAmount || 0, schedule.tokenDecimals || 18)}
+                    {formatAmount(
+                      schedule.scheduleAmount || 0,
+                      schedule.tokenDecimals || 18
+                    )}
                   </div>
                 </div>
 
                 <div>
                   <div className="text-[#97CBDC]/70 mb-1">Vested</div>
                   <div className="text-[#97CBDC] font-medium">
-                    {formatAmount(schedule.vestedAmount || 0, schedule.tokenDecimals || 18)}
+                    {formatAmount(
+                      schedule.vestedAmount || 0,
+                      schedule.tokenDecimals || 18
+                    )}
                   </div>
                 </div>
 
                 <div>
                   <div className="text-[#97CBDC]/70 mb-1">Releasable</div>
                   <div className="text-green-400 font-medium">
-                    {formatAmount(schedule.releasableAmount || 0, schedule.tokenDecimals || 18)}
+                    {formatAmount(
+                      schedule.releasableAmount || 0,
+                      schedule.tokenDecimals || 18
+                    )}
                   </div>
                 </div>
 
                 <div>
                   <div className="text-[#97CBDC]/70 mb-1">Progress</div>
-                  <div className="text-[#97CBDC] font-medium">{getScheduleProgress(schedule).toFixed(1)}%</div>
+                  <div className="text-[#97CBDC] font-medium">
+                    {getScheduleProgress(schedule).toFixed(1)}%
+                  </div>
                 </div>
               </div>
 
@@ -1834,8 +2027,11 @@ function SchedulesDashboard({
               className="bg-[#1D2538] border border-[#475B74]/50 rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-[#97CBDC]">Schedule Details</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-[#97CBDC]">
+                  {selectedSchedule.contractTitle ||
+                    `Schedule #${selectedSchedule.scheduleId}`}
+                </h2>
                 <button
                   onClick={() => onShowScheduleModal(false)}
                   className="text-[#97CBDC]/70 hover:text-[#97CBDC] transition-colors"
@@ -1844,124 +2040,149 @@ function SchedulesDashboard({
                 </button>
               </div>
 
-              <div className="space-y-6">
-                {/* Basic Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
-                    <div className="text-sm text-[#97CBDC]/70 mb-1">Schedule ID</div>
-                    <div className="text-[#97CBDC] font-medium">#{selectedSchedule.scheduleId}</div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
-                    <div className="text-sm text-[#97CBDC]/70 mb-1">Status</div>
-                    <div>{getStatusBadge(selectedSchedule)}</div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
-                    <div className="text-sm text-[#97CBDC]/70 mb-1">Recipient</div>
-                    <div className="text-[#97CBDC] font-mono text-sm">{selectedSchedule.recipient}</div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
-                    <div className="text-sm text-[#97CBDC]/70 mb-1">Sender</div>
-                    <div className="text-[#97CBDC] font-mono text-sm">{selectedSchedule.sender}</div>
+              <div className="space-y-4">
+                {/* Status and Progress */}
+                <div className="flex items-center justify-between">
+                  {getStatusBadge(selectedSchedule)}
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-[#97CBDC]">
+                      {getScheduleProgress(selectedSchedule).toFixed(1)}%
+                    </div>
+                    <div className="text-sm text-[#97CBDC]/70">Complete</div>
                   </div>
                 </div>
 
-                {/* Token Info */}
-                <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
-                  <h3 className="text-lg font-medium text-[#97CBDC] mb-3">Token Information</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <div className="text-sm text-[#97CBDC]/70 mb-1">Total Amount</div>
-                      <div className="text-[#97CBDC] font-medium">
-                        {formatAmount(selectedSchedule.totalAmount || 0, selectedSchedule.tokenDecimals || 18)}
-                      </div>
+                {/* Progress Bar */}
+                <div className="h-3 bg-[#0a0a20] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#004581] to-[#018ABD] transition-all duration-300"
+                    style={{
+                      width: `${Math.min(getScheduleProgress(selectedSchedule), 100)}%`,
+                    }}
+                  />
+                </div>
+
+                {/* Schedule Details */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-[#0a0a20]/50">
+                    <div className="text-[#97CBDC]/70 text-sm mb-1">
+                      Recipient
                     </div>
-                    <div>
-                      <div className="text-sm text-[#97CBDC]/70 mb-1">Vested Amount</div>
-                      <div className="text-[#97CBDC] font-medium">
-                        {formatAmount(selectedSchedule.vestedAmount || 0, selectedSchedule.tokenDecimals || 18)}
-                      </div>
+                    <div className="text-[#97CBDC] font-medium font-mono text-sm">
+                      {selectedSchedule.recipient}
                     </div>
-                    <div>
-                      <div className="text-sm text-[#97CBDC]/70 mb-1">Released Amount</div>
-                      <div className="text-[#97CBDC] font-medium">
-                        {formatAmount(selectedSchedule.releasedAmount || 0, selectedSchedule.tokenDecimals || 18)}
+                    {selectedSchedule.recipientEmail && (
+                      <div className="text-[#97CBDC]/70 text-xs mt-1">
+                        {selectedSchedule.recipientEmail}
                       </div>
+                    )}
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-[#0a0a20]/50">
+                    <div className="text-[#97CBDC]/70 text-sm mb-1">Sender</div>
+                    <div className="text-[#97CBDC] font-medium font-mono text-sm">
+                      {selectedSchedule.sender}
                     </div>
-                    <div>
-                      <div className="text-sm text-[#97CBDC]/70 mb-1">Releasable Amount</div>
-                      <div className="text-green-400 font-medium">
-                        {formatAmount(selectedSchedule.releasableAmount || 0, selectedSchedule.tokenDecimals || 18)}
-                      </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-[#0a0a20]/50">
+                    <div className="text-[#97CBDC]/70 text-sm mb-1">
+                      Total Amount
+                    </div>
+                    <div className="text-[#97CBDC] font-medium">
+                      {formatAmount(
+                        selectedSchedule.amount,
+                        selectedSchedule.tokenDecimals || 18
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-[#0a0a20]/50">
+                    <div className="text-[#97CBDC]/70 text-sm mb-1">
+                      Vested Amount
+                    </div>
+                    <div className="text-[#97CBDC] font-medium">
+                      {formatAmount(
+                        selectedSchedule.vestedAmount || 0,
+                        selectedSchedule.tokenDecimals || 18
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-[#0a0a20]/50">
+                    <div className="text-[#97CBDC]/70 text-sm mb-1">
+                      Releasable Amount
+                    </div>
+                    <div className="text-green-400 font-medium">
+                      {formatAmount(
+                        selectedSchedule.releasableAmount || 0,
+                        selectedSchedule.tokenDecimals || 18
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-[#0a0a20]/50">
+                    <div className="text-[#97CBDC]/70 text-sm mb-1">
+                      Unlock Schedule
+                    </div>
+                    <div className="text-[#97CBDC] font-medium">
+                      {vestingManager.getUnlockScheduleText(
+                        selectedSchedule.unlockSchedule
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Timeline */}
-                <div className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30">
-                  <h3 className="text-lg font-medium text-[#97CBDC] mb-3">Timeline</h3>
-                  <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-[#0a0a20]/50">
+                  <div className="text-[#97CBDC]/70 text-sm mb-2">Timeline</div>
+                  <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-[#97CBDC]/70">Start Time:</span>
-                      <span className="text-[#97CBDC]">{formatScheduleTime(selectedSchedule.startTime)}</span>
+                      <span className="text-[#97CBDC]/70">Start:</span>
+                      <span className="text-[#97CBDC]">
+                        {formatScheduleTime(selectedSchedule.startTime)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#97CBDC]/70">End Time:</span>
-                      <span className="text-[#97CBDC]">{formatScheduleTime(selectedSchedule.endTime)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#97CBDC]/70">Progress:</span>
-                      <span className="text-[#97CBDC]">{getScheduleProgress(selectedSchedule).toFixed(1)}%</span>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="mt-4">
-                    <div className="h-3 bg-[#0a0a20] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#004581] to-[#018ABD] transition-all duration-300"
-                        style={{
-                          width: `${Math.min(getScheduleProgress(selectedSchedule), 100)}%`,
-                        }}
-                      />
+                      <span className="text-[#97CBDC]/70">End:</span>
+                      <span className="text-[#97CBDC]">
+                        {formatScheduleTime(selectedSchedule.endTime)}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3">
-                  {!selectedSchedule.cancelled && selectedSchedule.releasableAmount > 0 && (
-                    <button
-                      onClick={() => {
-                        onReleaseTokens(selectedSchedule.scheduleId)
-                        onShowScheduleModal(false)
-                      }}
-                      disabled={vestingManager.isProcessing}
-                      className="flex-1 px-4 py-2 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {vestingManager.isProcessing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <CheckCircle className="w-4 h-4" />
-                          Release Tokens
-                        </>
-                      )}
-                    </button>
-                  )}
+                <div className="flex gap-3 pt-4">
+                  {!selectedSchedule.cancelled &&
+                    selectedSchedule.releasableAmount > 0 && (
+                      <button
+                        onClick={() => {
+                          onReleaseTokens(selectedSchedule.scheduleId);
+                          onShowScheduleModal(false);
+                        }}
+                        disabled={vestingManager.isProcessing}
+                        className="flex-1 px-4 py-2 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {vestingManager.isProcessing ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            Release Tokens
+                          </>
+                        )}
+                      </button>
+                    )}
 
                   {!selectedSchedule.cancelled && (
                     <button
                       onClick={() => {
-                        if (confirm("Are you sure you want to cancel this vesting schedule?")) {
-                          onCancelSchedule(selectedSchedule.scheduleId)
-                          onShowScheduleModal(false)
-                        }
+                        onCancelSchedule(selectedSchedule.scheduleId);
+                        onShowScheduleModal(false);
                       }}
                       disabled={vestingManager.isProcessing}
-                      className="flex-1 px-4 py-2 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="px-4 py-2 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 hover:bg-red-500/30 transition-colors disabled:opacity-50"
                     >
                       Cancel Schedule
                     </button>
@@ -1973,5 +2194,5 @@ function SchedulesDashboard({
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }
