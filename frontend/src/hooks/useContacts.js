@@ -4,7 +4,6 @@ import { useAccount } from "wagmi";
 const BASE_URL =
   import.meta.env.VITE_SERVER_URL ||
   "https://v-pay-backend.vercel.app/api/workers";
-console.log("BASE_URL:", BASE_URL);
 
 export function useContacts() {
   const { address: userAddress } = useAccount();
@@ -15,7 +14,6 @@ export function useContacts() {
   // Helper function to make API calls
   const makeRequest = async (url, options = {}) => {
     try {
-      console.log("Making request to:", url);
       const response = await fetch(url, {
         headers: {
           "Content-Type": "application/json",

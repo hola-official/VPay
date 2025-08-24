@@ -1,0 +1,199 @@
+<%- include('base-template', { body: `
+    <div class="section">
+        <h2 class="section-title">⚠️ Invoice Payment Overdue</h2>
+        <p>Dear <strong>${invoice.client.name || 'Valued Customer'}</strong>,</p>
+        <p>This is a friendly reminder that your invoice payment is currently overdue. We value your business and want to ensure a smooth payment process.</p>
+    </div>
+
+    <div class="amount-highlight" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+        <div class="amount">${invoice.currency || '$'}${invoice.remainingAmount.toFixed(2)}</div>
+        <div class="label">Overdue Amount</div>
+    </div>
+
+    <div class="section" style="background-color: #fdf2f2; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+        <h3 class="section-title" style="color: #e74c3c;">⏰ Payment Overdue Notice</h3>
+        <p style="margin: 0; color: #e74c3c;">
+            <strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString()}<br>
+            <strong>Days Overdue:</strong> ${daysOverdue} day${daysOverdue > 1 ? 's' : ''}<br>
+            <strong>Remaining Balance:</strong> ${invoice.currency || '$'}${invoice.remainingAmount.toFixed(2)}
+        </p>
+    </div>
+
+    <div class="section">
+        <h3 class="section-title">📋 Invoice Information</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Invoice Number</div>
+                <div class="info-value">#${invoice.invoiceNumber}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Issue Date</div>
+                <div class="info-value">${new Date(invoice.issueDate).toLocaleDateString()}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Due Date</div>
+                <div class="info-value">${new Date(invoice.dueDate).toLocaleDateString()}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Payment Method</div>
+                <div class="info-value">${invoice.paymentMethod === 'crypto' ? 'Cryptocurrency' : 'Bank Transfer'}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3 class="section-title">💰 Payment Summary</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Invoice Total</div>
+                <div class="info-value">${invoice.currency || '$'}${invoice.grandTotal.toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Amount Paid</div>
+                <div class="info-value">${invoice.currency || '$'}${invoice.totalAmountReceived.toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Remaining Balance</div>
+                <div class="info-value"><strong>${invoice.currency || '$'}${invoice.remainingAmount.toFixed(2)}</strong></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Current Status</div>
+                <div class="info-value">
+                    <span class="status-badge status-overdue">Overdue</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    ${invoice.items && invoice.items.length > 0 ? `
+    <div class="section">
+        <h3 class="section-title">🛒 Items & Services</h3>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${invoice.items.map(item => `
+                    <tr>
+                        <td>${item.description || 'N/A'}</td>
+                        <td>${item.quantity || 1}</td>
+                        <td>${invoice.currency || '$'}${(item.unitPrice || 0).toFixed(2)}</td>
+                        <td>${invoice.currency || '$'}${(item.total || 0).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    ` : ''}
+
+    ${invoice.paymentMethod === 'crypto' ? `
+    <div class="section">
+        <h3 class="section-title">🔐 Crypto Payment Details</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Accepted Tokens</div>
+                <div class="info-value">USDC, USDT</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Network</div>
+                <div class="info-value">Ethereum (ERC-20)</div>
+            </div>
+        </div>
+        <p style="margin-top: 15px; color: #666; font-size: 14px;">
+            <strong>Note:</strong> Crypto payments are processed instantly once confirmed on the blockchain. 
+            This is the fastest way to resolve your overdue balance.
+        </p>
+    </div>
+    ` : ''}
+
+    ${invoice.paymentMethod === 'bank' && invoice.paymentDetails ? `
+    <div class="section">
+        <h3 class="section-title">🏦 Bank Transfer Details</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Bank Name</div>
+                <div class="info-value">${invoice.paymentDetails.bankName}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Account Name</div>
+                <div class="info-value">${invoice.paymentDetails.accountName}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Account Number</div>
+                <div class="info-value">${invoice.paymentDetails.accountNumber}</div>
+            </div>
+            ${invoice.paymentDetails.routingNumber ? `
+            <div class="info-item">
+                <div class="info-label">Routing Number</div>
+                <div class="info-value">${invoice.paymentDetails.routingNumber}</div>
+            </div>
+            ` : ''}
+        </div>
+        <p style="margin-top: 15px; color: #666; font-size: 14px;">
+            <strong>Note:</strong> Please include your invoice number (#${invoice.invoiceNumber}) as a reference when making the bank transfer.
+        </p>
+    </div>
+    ` : ''}
+
+    <div class="section" style="text-align: center;">
+        <h3 class="section-title">💳 Resolve Overdue Payment</h3>
+        <p style="margin-bottom: 20px;">Please complete your payment as soon as possible to avoid any service interruptions.</p>
+        <a href="${invoiceUrl}" class="cta-button">View Invoice</a>
+        <a href="${paymentUrl}" class="cta-button" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">Pay Now</a>
+    </div>
+
+    <div class="section" style="background-color: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
+        <h3 class="section-title" style="color: #856404;">⚠️ Late Payment Consequences</h3>
+        <ul style="color: #856404; line-height: 1.8; margin: 0;">
+            <li>Late payments may affect your account status and future service availability</li>
+            <li>Additional late fees may be applied to overdue amounts</li>
+            <li>Service may be suspended for accounts with severely overdue balances</li>
+            <li>Your credit history and business relationship may be impacted</li>
+        </ul>
+    </div>
+
+    ${invoice.recurring && invoice.recurring.isRecurring ? `
+    <div class="section" style="background-color: #fdf2f2; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+        <h3 class="section-title" style="color: #e74c3c;">🔄 Recurring Subscription Impact</h3>
+        <p style="margin: 0; color: #e74c3c;">
+            <strong>Important:</strong> This overdue payment affects your recurring subscription. 
+            Future invoices may be delayed or suspended until the overdue balance is resolved. 
+            Please contact us immediately if you need to discuss payment arrangements.
+        </p>
+    </div>
+    ` : ''}
+
+    <div class="section">
+        <h3 class="section-title">📞 Need Help?</h3>
+        <p style="color: #666; line-height: 1.8;">
+            If you're experiencing financial difficulties or need to discuss payment arrangements, 
+            please don't hesitate to contact our support team. We're here to help and can work 
+            with you to find a solution that works for both parties.
+        </p>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="mailto:support@vpay.com" class="cta-button" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">Contact Support</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3 class="section-title">⚠️ Urgent Action Required</h3>
+        <ul style="color: #666; line-height: 1.8;">
+            <li>Please complete your payment immediately to avoid further consequences</li>
+            <li>If you've already made a payment, please ensure it includes the correct reference</li>
+            <li>For any questions or concerns, contact our support team right away</li>
+            <li>Keep this reminder for your records</li>
+        </ul>
+    </div>
+
+    <div class="section" style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+        <p style="margin: 0; color: #666; font-size: 14px;">
+            <strong>We value your business and want to help!</strong><br>
+            Please contact us if you need assistance with your payment or have any questions.
+        </p>
+    </div>
+` }) %> 

@@ -6,7 +6,7 @@ import "../src/Cirlcle.sol";
 
 contract CheckBalance is Script {
     function run() external view {
-        address tokenAddress = 0xae6c13C19ff16110BAD54E54280ec1014994631f;
+        address tokenAddress = 0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B;
         address user = 0x690C65EB2e2dd321ACe41a9865Aea3fAa98be2A5;
 
         Circle circle = Circle(tokenAddress);

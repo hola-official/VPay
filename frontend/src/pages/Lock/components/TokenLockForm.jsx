@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LockIcon as LockClosed,
@@ -23,6 +23,8 @@ import TokenLockSuccessModal from "./TokenLockSuccessModal";
 import { useTokenLock } from "@/hooks/useTokenLock";
 import { useTokenInfo } from "@/hooks/useTokenInfo";
 import { useAccount } from "wagmi";
+import ContactSelector from "@/components/ContactSelector";
+const MOTION_USED = motion;
 
 export default function TokenLockForm() {
   const { address } = useAccount();
@@ -32,12 +34,14 @@ export default function TokenLockForm() {
   const [lockUntil, setLockUntil] = useState("");
   const [useCustomOwner, setUseCustomOwner] = useState(false);
   const [ownerAddress, setOwnerAddress] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [showOwnerContactPicker, setShowOwnerContactPicker] = useState(false);
   const [addressError, setAddressError] = useState("");
   const [amountError, setAmountError] = useState("");
   const [dateError, setDateError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showTooltip, setShowTooltip] = useState("");
-  const [copied, setCopied] = useState(false);
+
   const [successData, setSuccessData] = useState(null);
   const [activeTab, setActiveTab] = useState("lock"); // 'lock', 'vesting', or 'multiple'
   const [showHelp, setShowHelp] = useState(false);
@@ -51,7 +55,7 @@ export default function TokenLockForm() {
       symbol: "USDT",
     },
     usdc: {
-      address: "0xae6c13C19ff16110BAD54E54280ec1014994631f",
+      address: "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B",
       name: "USD Coin",
       symbol: "USDC",
     },
@@ -70,11 +74,12 @@ export default function TokenLockForm() {
 
   // Multiple vesting specific state
   const [recipients, setRecipients] = useState([
-    { address: "", amount: "", error: "" },
+    { address: "", amount: "", email: "", error: "" },
   ]);
   const [recipientsError, setRecipientsError] = useState("");
   const [csvInput, setCsvInput] = useState("");
   const [showCsvInput, setShowCsvInput] = useState(false);
+  const [openPickerIndex, setOpenPickerIndex] = useState(null);
 
   const {
     performTokenLock,
@@ -82,8 +87,6 @@ export default function TokenLockForm() {
     isApproving,
     isLocking,
     isProcessing,
-    lockStatus,
-    checkIfLpToken,
   } = useTokenLock();
 
   // Set minimum date to today
@@ -215,7 +218,10 @@ export default function TokenLockForm() {
 
   // Multiple vesting handlers
   const addRecipient = () => {
-    setRecipients([...recipients, { address: "", amount: "", error: "" }]);
+    setRecipients([
+      ...recipients,
+      { address: "", amount: "", email: "", error: "" },
+    ]);
   };
 
   const removeRecipient = (index) => {
@@ -283,8 +289,15 @@ export default function TokenLockForm() {
       const lines = csvInput.trim().split("\n");
       const newRecipients = lines
         .map((line) => {
-          const [address, amount] = line.split(",").map((s) => s.trim());
-          return { address: address || "", amount: amount || "", error: "" };
+          const [address, amount, email = ""] = line
+            .split(",")
+            .map((s) => s.trim());
+          return {
+            address: address || "",
+            amount: amount || "",
+            email: email || "",
+            error: "",
+          };
         })
         .filter((r) => r.address || r.amount);
 
@@ -294,7 +307,7 @@ export default function TokenLockForm() {
         setShowCsvInput(false);
         validateRecipients(newRecipients);
       }
-    } catch (error) {
+    } catch {
       setRecipientsError("Invalid CSV format");
     }
   };
@@ -359,38 +372,41 @@ export default function TokenLockForm() {
     calculateVestingSchedule(amount, tgeBps, cycle, value);
   };
 
-  const calculateVestingSchedule = (
-    amountValue = amount,
-    tgeBpsValue = tgeBps,
-    cycleValue = cycle,
-    cycleBpsValue = cycleBps
-  ) => {
-    if (!amountValue || !tgeBpsValue || !cycleValue || !cycleBpsValue) {
-      setVestingDetails(null);
-      return;
-    }
+  const calculateVestingSchedule = useCallback(
+    (
+      amountValue = amount,
+      tgeBpsValue = tgeBps,
+      cycleValue = cycle,
+      cycleBpsValue = cycleBps
+    ) => {
+      if (!amountValue || !tgeBpsValue || !cycleValue || !cycleBpsValue) {
+        setVestingDetails(null);
+        return;
+      }
 
-    const totalAmount = Number(amountValue.replace(/,/g, ""));
-    const initialReleaseBps = Number(tgeBpsValue);
-    const cycleReleaseBps = Number(cycleBpsValue);
+      const totalAmount = Number(amountValue.replace(/,/g, ""));
+      const initialReleaseBps = Number(tgeBpsValue);
+      const cycleReleaseBps = Number(cycleBpsValue);
 
-    const initialRelease = (totalAmount * initialReleaseBps) / 10000;
-    const remainingAmount = totalAmount - initialRelease;
-    const cycleReleaseAmount = (totalAmount * cycleReleaseBps) / 10000;
+      const initialRelease = (totalAmount * initialReleaseBps) / 10000;
+      const remainingAmount = totalAmount - initialRelease;
+      const cycleReleaseAmount = (totalAmount * cycleReleaseBps) / 10000;
 
-    let totalCycles = 0;
-    if (cycleReleaseAmount > 0) {
-      totalCycles = Math.ceil(remainingAmount / cycleReleaseAmount);
-    }
+      let totalCycles = 0;
+      if (cycleReleaseAmount > 0) {
+        totalCycles = Math.ceil(remainingAmount / cycleReleaseAmount);
+      }
 
-    setVestingDetails({
-      initialRelease,
-      cycleReleaseAmount,
-      totalCycles,
-      remainingAmount,
-      totalDays: Math.ceil((totalCycles * Number(cycleValue)) / 86400),
-    });
-  };
+      setVestingDetails({
+        initialRelease,
+        cycleReleaseAmount,
+        totalCycles,
+        remainingAmount,
+        totalDays: Math.ceil((totalCycles * Number(cycleValue)) / 86400),
+      });
+    },
+    [amount, tgeBps, cycle, cycleBps]
+  );
 
   const handleVestingLock = async () => {
     // Validate all fields
@@ -546,12 +562,7 @@ export default function TokenLockForm() {
     calculateVestingSchedule(amount, tgeBps, seconds.toString(), cycleBps);
   };
 
-  // Copy contract address to clipboard
-  const copyContractAddress = () => {
-    navigator.clipboard.writeText("0x915c2CA177de432dcAC06BDf5566230528F8bA0");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  // (removed unused copy to clipboard helper)
 
   // Reset form after successful lock
   useEffect(() => {
@@ -576,7 +587,7 @@ export default function TokenLockForm() {
       setRecipients([{ address: "", amount: "", error: "" }]);
       setRecipientsError("");
     };
-  }, [showSuccessModal]);
+  }, [showSuccessModal, setTokenInfo]);
 
   const calculateVestingDetails = () => {
     if (
@@ -614,7 +625,7 @@ export default function TokenLockForm() {
     if (activeTab === "vesting" && amount && !vestingDetails) {
       calculateVestingSchedule();
     }
-  }, [activeTab, amount]);
+  }, [activeTab, amount, vestingDetails, calculateVestingSchedule]);
 
   // Format cycle duration for display
   const formatCycleDuration = (seconds) => {
@@ -1269,15 +1280,51 @@ export default function TokenLockForm() {
                     exit={{ opacity: 0, height: 0 }}
                     className="mt-3 space-y-2 overflow-hidden"
                   >
-                    <label className="block text-xs text-[#97CBDC]/70">
-                      Owner address
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs text-[#97CBDC]/70">
+                        Owner address
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowOwnerContactPicker(!showOwnerContactPicker)
+                        }
+                        className="text-[10px] px-2 py-0.5 rounded bg-[#018ABD]/20 text-[#018ABD] hover:bg-[#018ABD]/30 transition-colors"
+                      >
+                        {showOwnerContactPicker ? "Hide" : "Select"}
+                      </button>
+                    </div>
+                    {showOwnerContactPicker && (
+                      <div className="mb-2">
+                        <ContactSelector
+                          placeholder="Search contacts"
+                          showEmail
+                          onSelect={(contact) => {
+                            setOwnerAddress(contact.walletAddress);
+                            setOwnerEmail(contact.email || "");
+                            setShowOwnerContactPicker(false);
+                          }}
+                        />
+                      </div>
+                    )}
                     <input
                       value={ownerAddress}
                       onChange={(e) => setOwnerAddress(e.target.value)}
                       placeholder="0x..."
                       className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl p-3 text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
                     />
+                    <div className="space-y-1">
+                      <label className="block text-xs text-[#97CBDC]/70">
+                        Owner Email (Optional)
+                      </label>
+                      <input
+                        type="email"
+                        value={ownerEmail}
+                        onChange={(e) => setOwnerEmail(e.target.value)}
+                        placeholder="owner@example.com"
+                        className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-xl p-3 text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-2 focus:ring-[#018ABD]/50"
+                      />
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1963,7 +2010,7 @@ export default function TokenLockForm() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs font-medium text-[#97CBDC]">
-                        CSV Format: address,amount (one per line)
+                        CSV Format: address,amount,email (one per line)
                       </label>
                       <button
                         type="button"
@@ -1976,7 +2023,7 @@ export default function TokenLockForm() {
                     <textarea
                       value={csvInput}
                       onChange={(e) => setCsvInput(e.target.value)}
-                      placeholder={`0x1234...abcd,1000\n0x5678...efgh,2000\n0x9abc...ijkl,1500`}
+                      placeholder={`0x1234...abcd,1000,member1@example.com\n0x5678...efgh,2000,member2@example.com\n0x9abc...ijkl,1500,member3@example.com`}
                       className="w-full h-20 bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-lg p-2 text-sm text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-1 focus:ring-[#018ABD]/50 resize-none"
                     />
                     <div className="flex justify-end mt-2">
@@ -2017,9 +2064,43 @@ export default function TokenLockForm() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-[#97CBDC]/70 mb-1">
-                          Address
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs text-[#97CBDC]/70">
+                            Address
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenPickerIndex(
+                                openPickerIndex === index ? null : index
+                              )
+                            }
+                            className="text-[10px] px-2 py-0.5 rounded bg-[#018ABD]/20 text-[#018ABD] hover:bg-[#018ABD]/30 transition-colors"
+                          >
+                            {openPickerIndex === index ? "Hide" : "Select"}
+                          </button>
+                        </div>
+                        {openPickerIndex === index && (
+                          <div className="mb-2">
+                            <ContactSelector
+                              placeholder="Search contacts"
+                              showEmail
+                              onSelect={(contact) => {
+                                updateRecipient(
+                                  index,
+                                  "address",
+                                  contact.walletAddress
+                                );
+                                updateRecipient(
+                                  index,
+                                  "email",
+                                  contact.email || ""
+                                );
+                                setOpenPickerIndex(null);
+                              }}
+                            />
+                          </div>
+                        )}
                         <input
                           value={recipient.address}
                           onChange={(e) =>
@@ -2064,6 +2145,22 @@ export default function TokenLockForm() {
                               </div>
                             )}
                         </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <label className="block text-xs text-[#97CBDC]/70 mb-1">
+                          Email (Optional)
+                        </label>
+                        <input
+                          type="email"
+                          value={recipient.email}
+                          onChange={(e) =>
+                            updateRecipient(index, "email", e.target.value)
+                          }
+                          placeholder="member@example.com"
+                          className="w-full bg-[#0a0a20]/80 border border-[#475B74]/50 rounded-lg p-2 text-sm text-[#97CBDC] placeholder:text-[#97CBDC]/50 focus:outline-none focus:ring-1 focus:ring-[#018ABD]/50"
+                        />
                       </div>
                     </div>
                     {recipient.error && (

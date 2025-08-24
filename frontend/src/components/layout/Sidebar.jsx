@@ -39,12 +39,6 @@ export function Sidebar({ isOpen, onClose }) {
       icon: BriefcaseBusiness,
       description: "Create payroll vesting for your workers",
     },
-    // {
-    //   path: "/contact",
-    //   label: "Contact",
-    //   icon: Contact,
-    //   description: "Manage contact information",
-    // },
     {
       path: "/token-lock",
       label: "Token Locks",
@@ -52,11 +46,17 @@ export function Sidebar({ isOpen, onClose }) {
       description: "View all token locks and manage your own",
     },
     {
-      path: "/lp-lock",
-      label: "LP Locks",
-      icon: List,
-      description: "View all liquidity pool token locks",
+      path: "/contact",
+      label: "Contact",
+      icon: Contact,
+      description: "Manage contact information",
     },
+    // {
+    //   path: "/lp-lock",
+    //   label: "LP Locks",
+    //   icon: List,
+    //   description: "View all liquidity pool token locks",
+    // },
   ];
 
   return (

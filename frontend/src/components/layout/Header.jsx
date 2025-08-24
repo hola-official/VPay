@@ -33,9 +33,9 @@ export function Header({ onMenuToggle }) {
             <Button
               variant="ghost"
               size="icon"
-              className="hidden sm:flex relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer"
+              className="hidden sm:flex relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-[#1DA1F2]/30 bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20 hover:border-[#1DA1F2]/50 transition-all duration-300 cursor-pointer"
             >
-              <Twitter className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Twitter className="w-4 h-4 sm:w-5 sm:h-5 text-[#1DA1F2]" />
             </Button>
           </Link>
 

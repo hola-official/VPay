@@ -1,0 +1,156 @@
+<%- include('base-template', { body: `
+    <div class="section">
+        <h2 class="section-title">${verificationStatus === 'verified' ? '✅ Payment Verified!' : '❌ Payment Rejected'}</h2>
+        <p>A bank payment for one of your invoices has been <strong>${verificationStatus}</strong>. Here are the details:</p>
+    </div>
+
+    <div class="amount-highlight" style="background: ${verificationStatus === 'verified' ? 'linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)' : 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)'}">
+        <div class="amount">${invoice.currency || '$'}${paymentDetails.amountPaid.toFixed(2)}</div>
+        <div class="label">Payment Amount ${verificationStatus === 'verified' ? 'Verified' : 'Rejected'}</div>
+    </div>
+
+    <div class="section">
+        <h3 class="section-title">📋 Invoice Information</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Invoice Number</div>
+                <div class="info-value">#${invoice.invoiceNumber}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Client Name</div>
+                <div class="info-value">${invoice.client.name || 'N/A'}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Client Email</div>
+                <div class="info-value">${invoice.client.email}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Invoice Total</div>
+                <div class="info-value">${invoice.currency || '$'}${invoice.grandTotal.toFixed(2)}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3 class="section-title">💳 Payment Details</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Payment Type</div>
+                <div class="info-value">Bank Transfer</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Amount Paid</div>
+                <div class="info-value">${invoice.currency || '$'}${paymentDetails.amountPaid.toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Payment Date</div>
+                <div class="info-value">${new Date(paymentDetails.paymentDate).toLocaleDateString()}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Verification Status</div>
+                <div class="info-value">
+                    ${verificationStatus === 'verified' ? 
+                        '<span class="status-badge status-paid">Verified</span>' : 
+                        '<span class="status-badge status-overdue">Rejected</span>'}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    ${verificationStatus === 'rejected' ? `
+    <div class="section" style="background-color: #fdf2f2; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+        <h3 class="section-title" style="color: #e74c3c;">❌ Payment Rejection Details</h3>
+        <p style="margin: 0; color: #e74c3c;">
+            <strong>Reason for rejection:</strong> ${paymentDetails.bankVerificationNote || 'No specific reason provided'}
+        </p>
+        <p style="margin-top: 10px; color: #e74c3c; font-size: 14px;">
+            The payment amount has been removed from the invoice total and the remaining balance has been updated accordingly.
+        </p>
+    </div>
+    ` : ''}
+
+    ${verificationStatus === 'verified' ? `
+    <div class="section" style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; border-left: 4px solid #27ae60;">
+        <h3 class="section-title" style="color: #27ae60;">✅ Payment Successfully Verified</h3>
+        <p style="margin: 0; color: #27ae60;">
+            This bank payment has been manually verified and is now confirmed. 
+            The payment has been applied to the invoice and the status has been updated.
+        </p>
+    </div>
+    ` : ''}
+
+    <div class="section">
+        <h3 class="section-title">📊 Updated Invoice Status</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Total Amount</div>
+                <div class="info-value">${invoice.currency || '$'}${invoice.grandTotal.toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Total Received</div>
+                <div class="info-value">${invoice.currency || '$'}${invoice.totalAmountReceived.toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Remaining Balance</div>
+                <div class="info-value">${invoice.currency || '$'}${invoice.remainingAmount.toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Current Status</div>
+                <div class="info-value">
+                    ${invoice.invoiceStatus === 'Paid' ? '<span class="status-badge status-paid">Paid</span>' : 
+                      invoice.invoiceStatus === 'Partially Paid' ? '<span class="status-badge status-partial">Partially Paid</span>' : 
+                      '<span class="status-badge status-pending">Awaiting Payment</span>'}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    ${verificationStatus === 'verified' && invoice.recurring && invoice.recurring.isRecurring && invoice.invoiceStatus === 'Paid' ? `
+    <div class="section" style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; border-left: 4px solid #27ae60;">
+        <h3 class="section-title" style="color: #27ae60;">🔄 Recurring Invoice Generated</h3>
+        <p style="margin: 0; color: #27ae60;">
+            Since this invoice is now fully paid, the next recurring invoice has been automatically generated 
+            and will be sent to the client. The recurring cycle continues as scheduled.
+        </p>
+    </div>
+    ` : ''}
+
+    <div class="section" style="text-align: center;">
+        <h3 class="section-title">📱 Manage Your Invoice</h3>
+        <p style="margin-bottom: 20px;">Click the button below to view the complete invoice details and manage payments.</p>
+        <a href="${invoiceUrl}" class="cta-button">View Invoice</a>
+    </div>
+
+    <div class="section">
+        <h3 class="section-title">⚠️ Important Notes</h3>
+        <ul style="color: #666; line-height: 1.8;">
+            ${verificationStatus === 'verified' ? `
+            <li>This bank payment has been manually verified and confirmed</li>
+            <li>The payment is now permanently recorded in your system</li>
+            <li>No further action is required for this payment</li>
+            ` : `
+            <li>This bank payment has been rejected and removed from the invoice</li>
+            <li>The remaining balance has been updated accordingly</li>
+            <li>You may need to follow up with the client regarding the rejected payment</li>
+            `}
+            <li>Keep this notification for your records</li>
+            <li>Contact support if you have any questions</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h3 class="section-title">🔍 Verification Process</h3>
+        <p style="color: #666; line-height: 1.8;">
+            Bank payments require manual verification to ensure accuracy and prevent fraud. 
+            Our team reviews each transaction against bank records before confirming the payment.
+            ${verificationStatus === 'rejected' ? 'If you believe this rejection was made in error, please contact our support team immediately.' : ''}
+        </p>
+    </div>
+
+    <div class="section" style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+        <p style="margin: 0; color: #666; font-size: 14px;">
+            <strong>Thank you for using VPay!</strong><br>
+            We're committed to providing secure and reliable payment processing for your business.
+        </p>
+    </div>
+` }) %> 

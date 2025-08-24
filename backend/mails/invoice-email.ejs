@@ -1,0 +1,190 @@
+<%- include('base-template', { 
+    subject: 'New Invoice Received',
+    body: `
+    <div class="section">
+        <h2 class="section-title">📄 New Invoice Received</h2>
+        <p>Dear <strong>${invoice.client.name || 'Valued Customer'}</strong>,</p>
+        <p>You have received a new invoice from <strong>${creatorInfo?.name || 'VPay'}</strong>. Please review the details below and complete your payment.</p>
+    </div>
+
+    <div class="amount-highlight">
+        <div class="amount">${invoice.currency || '$'}${invoice.grandTotal.toFixed(2)}</div>
+        <div class="label">Total Amount Due</div>
+    </div>
+
+    <div class="section">
+        <h3 class="section-title">📋 Invoice Details</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Invoice Number</div>
+                <div class="info-value">#${invoice.invoiceNumber}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Issue Date</div>
+                <div class="info-value">${new Date(invoice.issueDate).toLocaleDateString()}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Due Date</div>
+                <div class="info-value">${new Date(invoice.dueDate).toLocaleDateString()}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Payment Method</div>
+                <div class="info-value">${invoice.paymentMethod === 'crypto' ? 'Cryptocurrency' : 'Bank Transfer'}</div>
+            </div>
+        </div>
+    </div>
+
+    ${invoice.items && invoice.items.length > 0 ? `
+    <div class="section">
+        <h3 class="section-title">🛒 Items & Services</h3>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${invoice.items.map(item => `
+                    <tr>
+                        <td>${item.description || 'N/A'}</td>
+                        <td>${item.quantity || 1}</td>
+                        <td>${invoice.currency || '$'}${(item.unitPrice || 0).toFixed(2)}</td>
+                        <td>${invoice.currency || '$'}${(item.total || 0).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    ` : ''}
+
+    <div class="section">
+        <h3 class="section-title">💰 Payment Summary</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Subtotal</div>
+                <div class="info-value">${invoice.currency || '$'}${invoice.subTotalBeforeDiscount.toFixed(2)}</div>
+            </div>
+            ${invoice.totalDiscountValue > 0 ? `
+            <div class="info-item">
+                <div class="info-label">Discount</div>
+                <div class="info-value">-${invoice.currency || '$'}${invoice.totalDiscountValue.toFixed(2)}</div>
+            </div>
+            ` : ''}
+            ${invoice.vatValue > 0 ? `
+            <div class="info-item">
+                <div class="info-label">VAT (${invoice.vatPercent}%)</div>
+                <div class="info-value">${invoice.currency || '$'}${invoice.vatValue.toFixed(2)}</div>
+            </div>
+            ` : ''}
+            <div class="info-item">
+                <div class="info-label">Grand Total</div>
+                <div class="info-value"><strong>${invoice.currency || '$'}${invoice.grandTotal.toFixed(2)}</strong></div>
+            </div>
+        </div>
+    </div>
+
+    ${invoice.paymentMethod === 'crypto' ? `
+    <div class="section">
+        <h3 class="section-title">🔐 Crypto Payment Details</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Accepted Tokens</div>
+                <div class="info-value">USDC, USDT</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Network</div>
+                <div class="info-value">Ethereum (ERC-20)</div>
+            </div>
+        </div>
+        <p style="margin-top: 15px; color: #666; font-size: 14px;">
+            <strong>Note:</strong> Please ensure you're sending the correct amount in the specified cryptocurrency. 
+            The payment will be processed automatically once the transaction is confirmed on the blockchain.
+        </p>
+    </div>
+    ` : ''}
+
+    ${invoice.paymentMethod === 'bank' && invoice.paymentDetails ? `
+    <div class="section">
+        <h3 class="section-title">🏦 Bank Transfer Details</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Bank Name</div>
+                <div class="info-value">${invoice.paymentDetails.bankName}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Account Name</div>
+                <div class="info-value">${invoice.paymentDetails.accountName}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Account Number</div>
+                <div class="info-value">${invoice.paymentDetails.accountNumber}</div>
+            </div>
+            ${invoice.paymentDetails.routingNumber ? `
+            <div class="info-item">
+                <div class="info-label">Routing Number</div>
+                <div class="info-value">${invoice.paymentDetails.routingNumber}</div>
+            </div>
+            ` : ''}
+        </div>
+        <p style="margin-top: 15px; color: #666; font-size: 14px;">
+            <strong>Note:</strong> Please include your invoice number (#${invoice.invoiceNumber}) as a reference when making the bank transfer.
+        </p>
+    </div>
+    ` : ''}
+
+    ${invoice.notes ? `
+    <div class="section">
+        <h3 class="section-title">📝 Additional Notes</h3>
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+            <p style="margin: 0; color: #34495e;">${invoice.notes}</p>
+        </div>
+    </div>
+    ` : ''}
+
+    ${invoice.recurring && invoice.recurring.isRecurring ? `
+    <div class="section">
+        <h3 class="section-title">🔄 Recurring Invoice</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Frequency</div>
+                <div class="info-value">${invoice.recurring.frequency.type === 'custom' ? `Every ${invoice.recurring.frequency.customDays} days` : invoice.recurring.frequency.type}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Current Cycle</div>
+                <div class="info-value">${invoice.recurring.currentCount}</div>
+            </div>
+        </div>
+        <p style="margin-top: 15px; color: #666; font-size: 14px;">
+            This is a recurring invoice. Future invoices will be generated automatically based on your subscription plan.
+        </p>
+    </div>
+    ` : ''}
+
+    <div class="section" style="text-align: center;">
+        <h3 class="section-title">💳 Ready to Pay?</h3>
+        <p style="margin-bottom: 20px;">Click the button below to view the full invoice and complete your payment securely.</p>
+        <a href="${invoiceUrl}" class="cta-button">View Invoice</a>
+        <a href="${paymentUrl}" class="cta-button" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">Pay Now</a>
+    </div>
+
+    <div class="section">
+        <h3 class="section-title">⚠️ Important Information</h3>
+        <ul style="color: #666; line-height: 1.8;">
+            <li>Please ensure payment is completed by <strong>${new Date(invoice.dueDate).toLocaleDateString()}</strong></li>
+            <li>Late payments may incur additional fees or affect your account status</li>
+            <li>For any questions or issues, please contact our support team</li>
+            <li>Keep this email for your records</li>
+        </ul>
+    </div>
+
+    <div class="section" style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+        <p style="margin: 0; color: #666; font-size: 14px;">
+            <strong>Thank you for choosing VPay!</strong><br>
+            We appreciate your business and are here to help with any questions you may have.
+        </p>
+    </div>
+    `
+}) %> 

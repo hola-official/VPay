@@ -5,42 +5,13 @@ import { createAvatar } from "@dicebear/core";
 import { personas } from "@dicebear/collection";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 import {
+  rabbyWallet,
   okxWallet,
   bitgetWallet,
-  binanceWallet,
   coinbaseWallet,
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
-
-const crossFiTestnet = {
-  id: 4157,
-  name: "CrossFi Testnet",
-  nativeCurrency: {
-    decimals: 18,
-    name: "CrossFi Testnet",
-    symbol: "XFI",
-  },
-  rpcUrls: {
-    default: {
-      http: [
-        import.meta.env.VITE_CROSSFI_TESTNET_RPC_URL ||
-          "https://tendermint-rpc.testnet.ms/",
-      ],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Xfi Scan",
-      url: "https://test.xfiscan.com/",
-    },
-  },
-  contracts: {
-    multicall3: {
-      address: "0xe6F2f5f35752adc98FD0C1eB1b82DD09fC3F47A2",
-      blockCreated: 10236317,
-    },
-  },
-};
+import { celoAlfajores } from "wagmi/chains";
 
 const REOWN_CLOUD_APP_ID = import.meta.env.VITE_REOWN_CLOUD_APP_ID || "";
 
@@ -53,9 +24,9 @@ const connectors = connectorsForWallets(
     {
       groupName: "Recommended",
       wallets: [
+        rabbyWallet,
         okxWallet,
         bitgetWallet,
-        binanceWallet,
         coinbaseWallet,
         walletConnectWallet,
       ],
@@ -69,15 +40,9 @@ const connectors = connectorsForWallets(
 
 const config = createConfig({
   connectors,
-  chains: [crossFiTestnet],
+  chains: [celoAlfajores],
   transports: {
-    [crossFiTestnet.id]: http(import.meta.env.VITE_CROSSFI_TESTNET_RPC_URL, {
-      fetchOptions: {
-        headers: {
-          Origin: window.location.origin,
-        },
-      },
-    }),
+    [celoAlfajores.id]: http(),
   },
   ssr: true,
 });

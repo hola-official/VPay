@@ -10,6 +10,8 @@ import {
   Settings,
   FileText,
   HelpCircle,
+  Contact,
+  X,
 } from "lucide-react";
 import {
   useVestingManager,
@@ -20,6 +22,7 @@ import {
 import { useTokenInfo } from "@/hooks/useTokenInfo";
 import { useAccount } from "wagmi";
 import { formatUnits } from "viem";
+import ContactSelector from "@/components/ContactSelector";
 
 export default function VestingManagerForm() {
   const { address } = useAccount();
@@ -36,7 +39,7 @@ export default function VestingManagerForm() {
       symbol: "USDT",
     },
     usdc: {
-      address: "0xae6c13C19ff16110BAD54E54280ec1014994631f",
+      address: "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B",
       name: "USD Coin",
       symbol: "USDC",
     },
@@ -325,7 +328,10 @@ export default function VestingManagerForm() {
   };
 
   const formatAmount = (amount, decimals) => {
-    return Number(formatUnits(BigInt(amount), decimals)).toLocaleString();
+    console.log(amount)
+    console.log(Number(formatUnits(amount, decimals)).toLocaleString());
+    formatUnits(amount, decimals)
+    return Number(amount).toLocaleString();
   };
 
   const getScheduleProgress = (schedule) => {
@@ -630,6 +636,7 @@ function SingleScheduleForm({
   onShowTooltip,
   onCreateSchedule,
 }) {
+  const [showContactPicker, setShowContactPicker] = useState(false);
   return (
     <div className="p-6 rounded-3xl border border-[#475B74]/50 bg-gradient-to-b from-[#1D2538]/90 to-[#1D2538] shadow-lg space-y-6">
       {/* Token Selection */}
@@ -812,9 +819,35 @@ function SingleScheduleForm({
       {/* Recipient and Amount */}
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-[#97CBDC]">
-            Recipient Address <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-[#97CBDC]">
+              Recipient Address <span className="text-red-500">*</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowContactPicker(!showContactPicker)}
+              className="text-xs px-2 py-1 rounded-md bg-[#018ABD]/20 text-[#018ABD] hover:bg-[#018ABD]/30 transition-colors flex items-center gap-2"
+            >
+              {showContactPicker ? (
+                <X className="w-4 h-4 cursor-pointer" />
+              ) : (
+                <Contact className="w-4 h-4 cursor-pointer" />
+              )}
+            </button>
+          </div>
+          {showContactPicker && (
+            <div className="mt-1">
+              <ContactSelector
+                placeholder="Search contacts by name, address or email"
+                showEmail
+                onSelect={(contact) => {
+                  onRecipientChange(contact.walletAddress);
+                  onRecipientEmailChange(contact.email || "");
+                  setShowContactPicker(false);
+                }}
+              />
+            </div>
+          )}
           <input
             value={recipient}
             onChange={(e) => onRecipientChange(e.target.value)}
@@ -1136,6 +1169,7 @@ function MultipleSchedulesForm({
   onParseCsvInput,
   onCreateSchedules,
 }) {
+  const [openPickerIndex, setOpenPickerIndex] = useState(null);
   const getTotalAmount = () => {
     return recipients.reduce((total, recipient) => {
       const amount = Number(recipient.amount.replace(/,/g, "")) || 0;
@@ -1486,9 +1520,33 @@ function MultipleSchedulesForm({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-[#97CBDC]/70 mb-1">
-                    Address *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs text-[#97CBDC]/70">
+                      Address *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenPickerIndex(openPickerIndex === index ? null : index)
+                      }
+                      className="text-[10px] px-2 py-0.5 rounded bg-[#018ABD]/20 text-[#018ABD] hover:bg-[#018ABD]/30 transition-colors"
+                    >
+                      {openPickerIndex === index ? "Hide" : "Select"}
+                    </button>
+                  </div>
+                  {openPickerIndex === index && (
+                    <div className="mb-2">
+                      <ContactSelector
+                        placeholder="Search contacts"
+                        showEmail
+                        onSelect={(contact) => {
+                          onUpdateRecipient(index, "address", contact.walletAddress);
+                          onUpdateRecipient(index, "email", contact.email || "");
+                          setOpenPickerIndex(null);
+                        }}
+                      />
+                    </div>
+                  )}
                   <input
                     value={recipient.address}
                     onChange={(e) =>
@@ -1565,6 +1623,7 @@ function MultipleSchedulesForm({
               )}
             </motion.div>
           ))}
+          
         </div>
 
         {/* Total Summary */}
@@ -1898,7 +1957,7 @@ function SchedulesDashboard({
         <div className="space-y-4">
           {filteredSchedules.map((schedule, index) => (
             <motion.div
-              key={schedule.scheduleId || index}
+              key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="p-4 rounded-xl bg-[#0a0a20]/50 border border-[#475B74]/30 hover:border-[#018ABD]/50 transition-colors"
@@ -1955,7 +2014,7 @@ function SchedulesDashboard({
                   <div className="text-[#97CBDC]/70 mb-1">Total Amount</div>
                   <div className="text-[#97CBDC] font-medium">
                     {formatAmount(
-                      schedule.scheduleAmount || 0,
+                      schedule?.totalAmount || 0,
                       schedule.tokenDecimals || 18
                     )}
                   </div>
@@ -2091,7 +2150,7 @@ function SchedulesDashboard({
                     </div>
                     <div className="text-[#97CBDC] font-medium">
                       {formatAmount(
-                        selectedSchedule.amount,
+                        selectedSchedule.totalAmount,
                         selectedSchedule.tokenDecimals || 18
                       )}
                     </div>

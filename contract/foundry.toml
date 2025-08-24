@@ -10,6 +10,8 @@ solc = "0.8.24"
 
 [rpc_endpoints]
 crossfi_testnet = "${CROSSFI_RPC_URL}"
+celo_alfajores = "${CELO_RPC_URL}"
+sonic_blaze_testnet = "${SONIC_BLAZE_TESTNET_RPC_URL}"
 
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

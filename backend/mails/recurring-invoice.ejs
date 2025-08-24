@@ -1,0 +1,210 @@
+<%- include('base-template', { body: ` <div class="section">
+  <h2 class="section-title">🔄 Recurring Invoice Generated</h2>
+  <p>Dear <strong>${invoice.client.name || 'Valued Customer'}</strong>,</p>
+  <p>Your recurring invoice has been automatically generated as scheduled. This is part of your ongoing subscription
+    with <strong>${creatorInfo?.name || 'VPay'}</strong>.</p>
+  </div>
+
+  <div class="amount-highlight">
+    <div class="amount">${invoice.currency || '$'}${invoice.grandTotal.toFixed(2)}</div>
+    <div class="label">Recurring Invoice Amount</div>
+  </div>
+
+  <div class="section">
+    <h3 class="section-title">📋 Invoice Details</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Invoice Number</div>
+        <div class="info-value">#${invoice.invoiceNumber}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Issue Date</div>
+        <div class="info-value">${new Date(invoice.issueDate).toLocaleDateString()}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Due Date</div>
+        <div class="info-value">${new Date(invoice.dueDate).toLocaleDateString()}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Payment Method</div>
+        <div class="info-value">${invoice.paymentMethod === 'crypto' ? 'Cryptocurrency' : 'Bank Transfer'}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3 class="section-title">🔄 Recurring Information</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Frequency</div>
+        <div class="info-value">${invoice.recurring.frequency.type === 'custom' ? `Every
+          ${invoice.recurring.frequency.customDays} days` : invoice.recurring.frequency.type}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Current Cycle</div>
+        <div class="info-value">${invoice.recurring.currentCount}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Parent Invoice</div>
+        <div class="info-value">#${invoice.parentInvoiceId ? 'Linked to parent' : 'Original invoice'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Auto-Generated</div>
+        <div class="info-value">Yes</div>
+      </div>
+    </div>
+    <p style="margin-top: 15px; color: #666; font-size: 14px;">
+      <strong>Note:</strong> This invoice was automatically generated based on your recurring subscription settings.
+      Future invoices will continue to be generated automatically until the subscription is cancelled or reaches its end
+      condition.
+    </p>
+  </div>
+
+  ${invoice.items && invoice.items.length > 0 ? `
+  <div class="section">
+    <h3 class="section-title">🛒 Items & Services</h3>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Quantity</th>
+          <th>Unit Price</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${invoice.items.map(item => `
+        <tr>
+          <td>${item.description || 'N/A'}</td>
+          <td>${item.quantity || 1}</td>
+          <td>${invoice.currency || '$'}${(item.unitPrice || 0).toFixed(2)}</td>
+          <td>${invoice.currency || '$'}${(item.total || 0).toFixed(2)}</td>
+        </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+  ` : ''}
+
+  <div class="section">
+    <h3 class="section-title">💰 Payment Summary</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Subtotal</div>
+        <div class="info-value">${invoice.currency || '$'}${invoice.subTotalBeforeDiscount.toFixed(2)}</div>
+      </div>
+      ${invoice.totalDiscountValue > 0 ? `
+      <div class="info-item">
+        <div class="info-label">Discount</div>
+        <div class="info-value">-${invoice.currency || '$'}${invoice.totalDiscountValue.toFixed(2)}</div>
+      </div>
+      ` : ''}
+      ${invoice.vatValue > 0 ? `
+      <div class="info-item">
+        <div class="info-label">VAT (${invoice.vatPercent}%)</div>
+        <div class="info-value">${invoice.currency || '$'}${invoice.vatValue.toFixed(2)}</div>
+      </div>
+      ` : ''}
+      <div class="info-item">
+        <div class="info-label">Grand Total</div>
+        <div class="info-value"><strong>${invoice.currency || '$'}${invoice.grandTotal.toFixed(2)}</strong></div>
+      </div>
+    </div>
+  </div>
+
+  ${invoice.paymentMethod === 'crypto' ? `
+  <div class="section">
+    <h3 class="section-title">🔐 Crypto Payment Details</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Accepted Tokens</div>
+        <div class="info-value">USDC, USDT</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Network</div>
+        <div class="info-value">Ethereum (ERC-20)</div>
+      </div>
+    </div>
+    <p style="margin-top: 15px; color: #666; font-size: 14px;">
+      <strong>Note:</strong> Please ensure you're sending the correct amount in the specified cryptocurrency.
+      The payment will be processed automatically once the transaction is confirmed on the blockchain.
+    </p>
+  </div>
+  ` : ''}
+
+  ${invoice.paymentMethod === 'bank' && invoice.paymentDetails ? `
+  <div class="section">
+    <h3 class="section-title">🏦 Bank Transfer Details</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Bank Name</div>
+        <div class="info-value">${invoice.paymentDetails.bankName}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Account Name</div>
+        <div class="info-value">${invoice.paymentDetails.accountName}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Account Number</div>
+        <div class="info-value">${invoice.paymentDetails.accountNumber}</div>
+      </div>
+      ${invoice.paymentDetails.routingNumber ? `
+      <div class="info-item">
+        <div class="info-label">Routing Number</div>
+        <div class="info-value">${invoice.paymentDetails.routingNumber}</div>
+      </div>
+      ` : ''}
+    </div>
+    <p style="margin-top: 15px; color: #666; font-size: 14px;">
+      <strong>Note:</strong> Please include your invoice number (#${invoice.invoiceNumber}) as a reference when making
+      the bank transfer.
+    </p>
+  </div>
+  ` : ''}
+
+  ${invoice.notes ? `
+  <div class="section">
+    <h3 class="section-title">📝 Additional Notes</h3>
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+      <p style="margin: 0; color: #34495e;">${invoice.notes}</p>
+    </div>
+  </div>
+  ` : ''}
+
+  <div class="section" style="text-align: center;">
+    <h3 class="section-title">💳 Ready to Pay?</h3>
+    <p style="margin-bottom: 20px;">Click the button below to view the full invoice and complete your payment securely.
+    </p>
+    <a href="${invoiceUrl}" class="cta-button">View Invoice</a>
+    <a href="${paymentUrl}" class="cta-button"
+      style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">Pay Now</a>
+  </div>
+
+  <div class="section"
+    style="background-color: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
+    <h3 class="section-title" style="color: #856404;">🔄 Recurring Subscription Information</h3>
+    <ul style="color: #856404; line-height: 1.8; margin: 0;">
+      <li>This is an automatically generated recurring invoice</li>
+      <li>Future invoices will be generated based on your subscription frequency</li>
+      <li>To cancel or modify your subscription, please contact our support team</li>
+      <li>Payment is due by <strong>${new Date(invoice.dueDate).toLocaleDateString()}</strong></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h3 class="section-title">⚠️ Important Information</h3>
+    <ul style="color: #666; line-height: 1.8;">
+      <li>Please ensure payment is completed by <strong>${new Date(invoice.dueDate).toLocaleDateString()}</strong></li>
+      <li>Late payments may affect your recurring subscription status</li>
+      <li>For any questions about your subscription, please contact our support team</li>
+      <li>Keep this email for your records</li>
+    </ul>
+  </div>
+
+  <div class="section" style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+    <p style="margin: 0; color: #666; font-size: 14px;">
+      <strong>Thank you for your continued business!</strong><br>
+      We appreciate your loyalty and are here to help with any questions about your subscription.
+    </p>
+  </div>
+  ` }) %>

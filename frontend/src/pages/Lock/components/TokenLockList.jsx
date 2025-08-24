@@ -672,8 +672,8 @@ export default function TokenLockList({ type = "token" }) {
     if (!lock) return "0";
 
     // If we have a formatted amount, use it
-    if (lock.formattedAmount && !lock.hasError) {
-      const numericAmount = Number(lock.formattedAmount);
+    if (lock.amount && !lock.hasError) {
+      const numericAmount = Number(lock.amount);
       return abbreviateNumber(numericAmount);
     }
 

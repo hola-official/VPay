@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import { useAccount } from "wagmi";
 import {
   Search,
@@ -14,15 +14,33 @@ import {
   Save,
   Download,
   Upload,
-  Filter,
-  MoreVertical,
   Copy,
   Check,
   AlertCircle,
 } from "lucide-react";
 import { useContacts } from "@/hooks/useContacts";
+import { createAvatar } from "@dicebear/core";
+import { personas } from "@dicebear/collection";
 
 export default function ContactPage() {
+  const DicebearPersonaAvatar = ({ address, size = 80 }) => {
+    const avatarUri = createAvatar(personas, {
+      seed: (address || "").toLowerCase(),
+      scale: 90,
+      radius: 50,
+      backgroundColor: ["b6e3f4", "c0aede", "d1d4f9"],
+    }).toDataUri();
+
+    return (
+      <img
+        src={avatarUri}
+        width={size}
+        height={size}
+        alt={`${address?.slice(0, 6) || ""}...${address?.slice(-4) || ""} avatar`}
+        className="rounded-full"
+      />
+    );
+  };
   const { address: userAddress } = useAccount();
   const {
     contacts,
@@ -35,8 +53,6 @@ export default function ContactPage() {
     importContacts,
     exportContacts,
   } = useContacts();
-
-  console.log("ContactPage - userAddress:", userAddress);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredContacts, setFilteredContacts] = useState([]);
@@ -70,7 +86,7 @@ export default function ContactPage() {
       try {
         const results = await searchContacts(searchTerm);
         setFilteredContacts(results);
-      } catch (error) {
+      } catch {
         // Fallback to local filtering
         const filtered = contacts.filter((contact) => {
           const searchLower = searchTerm.toLowerCase();
@@ -132,6 +148,8 @@ export default function ContactPage() {
 
     try {
       if (editingContact) {
+        // console.log("editingContact", editingContact);
+        // console.log("formData", formData);
         await updateContact(editingContact._id || editingContact.id, formData);
       } else {
         await createContact(formData);
@@ -180,6 +198,7 @@ export default function ContactPage() {
   const validateWalletAddress = (address) => {
     return address.startsWith("0x") && address.length === 42;
   };
+  console.log("contacts", contacts);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a20] to-[#1a1a3a] text-white">
@@ -283,8 +302,8 @@ export default function ContactPage() {
           </div>
         )}
 
-        {/* Contacts List */}
-        <div className="bg-[#1D2538]/30 border border-[#475B74]/30 rounded-xl overflow-hidden">
+        {/* Contacts Grid */}
+        <div className="bg-[#1D2538]/30 border border-[#475B74]/30 rounded-xl">
           {isLoading && contacts.length === 0 ? (
             <div className="p-8 text-center">
               <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-[#97CBDC]" />
@@ -311,62 +330,63 @@ export default function ContactPage() {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-[#475B74]/30">
-              {filteredContacts.map((contact) => (
-                <motion.div
-                  key={contact._id || contact.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-6 hover:bg-[#0a0a20]/30 transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-[#018ABD]/20 rounded-full flex items-center justify-center">
-                          <User className="w-5 h-5 text-[#018ABD]" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-[#97CBDC] truncate">
-                            {contact.fullName}
-                          </h3>
-                          {contact.label && (
-                            <span className="inline-block px-2 py-1 text-xs rounded-full bg-[#018ABD]/20 text-[#018ABD] mt-1">
-                              {contact.label}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="ml-13 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#97CBDC]/70 text-sm font-mono bg-[#0a0a20]/50 px-2 py-1 rounded">
-                            {contact.walletAddress}
-                          </span>
-                          <button
-                            onClick={() =>
-                              copyToClipboard(contact.walletAddress)
-                            }
-                            className="text-[#97CBDC]/50 hover:text-[#97CBDC] transition-colors"
-                            title="Copy address"
-                          >
-                            {copiedAddress === contact.walletAddress ? (
-                              <Check className="w-4 h-4" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
+            <div className="p-3 sm:p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                {filteredContacts.map((contact) => (
+                  <Motion.div
+                    key={contact._id || contact.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="h-full rounded-xl bg-[#1D2538]/50 border border-[#475B74]/30 p-4 hover:bg-[#0a0a20]/40 hover:border-[#018ABD]/50 transition-colors"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="flex-1 min-w-0 items-center">
+                        <div className="flex flex-col gap-3 mb-2 sm:mb-3">
+                          <DicebearPersonaAvatar
+                            address={contact.walletAddress}
+                            size={80}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-[#97CBDC] text-sm sm:text-base truncate">
+                              {contact.fullName}
+                            </h3>
+                            {contact.label && (
+                              <span className="inline-block px-2 py-1 text-xs rounded-full bg-[#018ABD]/20 text-[#018ABD] mt-1">
+                                {contact.label}
+                              </span>
                             )}
-                          </button>
+                          </div>
                         </div>
 
-                        {contact.email && (
+                        <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <Mail className="w-4 h-4 text-[#97CBDC]/50" />
-                            <span className="text-[#97CBDC]/70 text-sm">
-                              {contact.email}
+                            <span className="text-[#97CBDC]/70 text-xs sm:text-sm font-mono bg-[#0a0a20]/50 px-2 py-1 rounded-lg truncate">
+                              {contact.walletAddress}
                             </span>
+                            <button
+                              onClick={() =>
+                                copyToClipboard(contact.walletAddress)
+                              }
+                              className="text-[#97CBDC]/50 hover:text-[#97CBDC] transition-colors"
+                              title="Copy address"
+                            >
+                              {copiedAddress === contact.walletAddress ? (
+                                <Check className="w-4 h-4" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
                           </div>
-                        )}
 
-                        <div className="flex items-center gap-2 mt-2">
+                          {contact.email && (
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-4 h-4 text-[#97CBDC]/50" />
+                              <span className="text-xs sm:text-sm text-[#97CBDC]/70 truncate">
+                                {contact.email}
+                              </span>
+                            </div>
+                          )}
+
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full ${
                               contact.isActive !== false
@@ -374,38 +394,43 @@ export default function ContactPage() {
                                 : "bg-gray-500/20 text-gray-400"
                             }`}
                           >
-                            <div
+                            <span
                               className={`w-2 h-2 rounded-full ${
                                 contact.isActive !== false
                                   ? "bg-green-400"
                                   : "bg-gray-400"
                               }`}
                             />
-                            {contact.isActive !== false ? "Active" : "Inactive"}
+                            {contact.isActive !== undefined &&
+                            contact.isActive !== null
+                              ? contact.isActive
+                                ? "Active"
+                                : "Inactive"
+                              : "Inactive"}
                           </span>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 ml-4">
-                      <button
-                        onClick={() => handleEditContact(contact)}
-                        className="p-2 text-[#97CBDC]/70 hover:text-[#97CBDC] hover:bg-[#0a0a20]/50 rounded-lg transition-colors"
-                        title="Edit contact"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeletingContact(contact)}
-                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title="Delete contact"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-2 sm:self-start">
+                        <button
+                          onClick={() => handleEditContact(contact)}
+                          className="p-2 text-[#97CBDC]/70 hover:text-[#97CBDC] hover:bg-[#0a0a20]/50 rounded-lg transition-colors"
+                          title="Edit contact"
+                        >
+                          <Edit className="w-4 h-4 cursor-pointer" />
+                        </button>
+                        <button
+                          onClick={() => setDeletingContact(contact)}
+                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                          title="Delete contact"
+                        >
+                          <Trash2 className="w-4 h-4 cursor-pointer" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </Motion.div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -413,13 +438,13 @@ export default function ContactPage() {
         {/* Add/Edit Modal */}
         <AnimatePresence>
           {showAddModal && (
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             >
-              <motion.div
+              <Motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
@@ -436,7 +461,7 @@ export default function ContactPage() {
                     }}
                     className="text-[#97CBDC]/70 hover:text-[#97CBDC] transition-colors"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5 cursor-pointer" />
                   </button>
                 </div>
 
@@ -522,38 +547,25 @@ export default function ContactPage() {
                     <label className="block text-sm font-medium text-[#97CBDC] mb-2">
                       Active Status
                     </label>
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <label className="relative inline-flex items-center cursor-pointer">
                         <input
-                          type="radio"
-                          name="isActive"
-                          value="true"
+                          type="checkbox"
                           checked={formData.isActive === true}
-                          onChange={(e) =>
+                          onChange={() =>
                             setFormData({
                               ...formData,
-                              isActive: e.target.value === "true",
+                              isActive: formData.isActive !== true ? true : false,
                             })
                           }
-                          className="w-4 h-4 text-[#018ABD] bg-[#0a0a20]/80 border-[#475B74]/50 focus:ring-[#018ABD]/50 focus:ring-2"
+                          className="sr-only peer"
+                          aria-checked={formData.isActive === true}
                         />
-                        <span className="text-[#97CBDC] text-sm">Active</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="isActive"
-                          value="false"
-                          checked={formData.isActive === false}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              isActive: e.target.value === "true",
-                            })
-                          }
-                          className="w-4 h-4 text-[#018ABD] bg-[#0a0a20]/80 border-[#475B74]/50 focus:ring-[#018ABD]/50 focus:ring-2"
-                        />
-                        <span className="text-[#97CBDC] text-sm">Inactive</span>
+                        <div className="w-11 h-6 bg-[#475B74]/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#018ABD]/50 rounded-full peer-checked:bg-[#018ABD] transition-colors"></div>
+                        <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                        <span className="ml-3 text-sm text-[#97CBDC]">
+                          {formData.isActive ? "Active" : "Inactive"}
+                        </span>
                       </label>
                     </div>
                     <p className="text-[#97CBDC]/60 text-xs mt-1">
@@ -569,7 +581,7 @@ export default function ContactPage() {
                         setShowAddModal(false);
                         setEditingContact(null);
                       }}
-                      className="flex-1 px-4 py-3 bg-[#1D2538] hover:bg-[#1D2538]/80 border border-[#475B74]/50 rounded-lg text-[#97CBDC] transition-colors"
+                      className="flex-1 px-4 py-3 bg-[#1D2538] hover:bg-[#1D2538]/80 border border-[#475B74]/50 rounded-lg text-[#97CBDC] transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -581,28 +593,28 @@ export default function ContactPage() {
                         !formData.email ||
                         !validateWalletAddress(formData.walletAddress)
                       }
-                      className="flex-1 px-4 py-3 bg-[#018ABD] hover:bg-[#018ABD]/80 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-3 bg-[#018ABD] hover:bg-[#018ABD]/80 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Save className="w-4 h-4" />
                       {editingContact ? "Update" : "Save"}
                     </button>
                   </div>
                 </form>
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
 
         {/* Delete Confirmation Modal */}
         <AnimatePresence>
           {deletingContact && (
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             >
-              <motion.div
+              <Motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
@@ -638,21 +650,21 @@ export default function ContactPage() {
                     </button>
                   </div>
                 </div>
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
 
         {/* Import Modal */}
         <AnimatePresence>
           {showImportModal && (
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             >
-              <motion.div
+              <Motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
@@ -728,8 +740,8 @@ export default function ContactPage() {
                     </button>
                   </div>
                 </div>
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
       </div>
