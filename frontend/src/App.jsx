@@ -9,6 +9,13 @@ import LPLockListPage from "@/pages/Lock/LP";
 import Payroll from "@/pages/Payroll";
 import { BackgroundEffects } from "@/components/ui/BackgroundEffects";
 import ContactsPage from "@/pages/Contact";
+import InvoicesPage from "@/pages/Invoices";
+import PaymentsPage from "@/pages/Payments";
+import RecurringPage from "@/pages/Recurring";
+import ReceiptsPage from "@/pages/Receipts";
+import SettingsPage from "@/pages/Settings";
+import InvoiceViewPage from "@/pages/InvoiceView";
+import CreateInvoicePage from "@/pages/CreateInvoice";
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -29,11 +36,18 @@ function App() {
           <div className="p-4 sm:p-6 lg:p-8">
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/invoices" element={<InvoicesPage />} />
+              <Route path="/invoices/create" element={<CreateInvoicePage />} />
+              <Route path="/invoices/:id" element={<InvoiceViewPage />} />
+              <Route path="/payments" element={<PaymentsPage />} />
+              <Route path="/recurring" element={<RecurringPage />} />
+              <Route path="/receipts" element={<ReceiptsPage />} />
               <Route path="/create-lock" element={<TokenLockPage />} />
               <Route path="/pay" element={<Payroll />} />
               <Route path="/contact" element={<ContactsPage />} />
               <Route path="/token-lock" element={<TokenLock />} />
               <Route path="/lp-lock" element={<LPLockListPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </div>
         </main>

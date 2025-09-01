@@ -23,7 +23,7 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
         RECIPIENT_ONLY,
         BOTH
     }
-    
+
     enum ChangeRecipientPermission {
         NONE,
         SENDER_ONLY,
@@ -73,20 +73,20 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
     // State variables
     uint256 private constant ID_PADDING = 1_000_000;
     VestingSchedule[] private _vestingSchedules;
-    
+
     // Mappings for efficient lookups
     mapping(address => EnumerableSet.UintSet) private _recipientSchedules;
     mapping(address => EnumerableSet.UintSet) private _senderSchedules;
     mapping(address => EnumerableSet.UintSet) private _tokenSchedules;
-    
+
     // Token tracking
     EnumerableSet.AddressSet private _vestedTokens;
     mapping(address => TokenVestingInfo) public tokenVestingInfo;
-    
+
     // Fee system (optional, like TokenLocker)
     address private feeRecipient;
     uint256 public vestingFeePercentage = 0; // 0% by default, can be set by owner
-    
+
     // Events
     event VestingScheduleCreated(
         uint256 indexed scheduleId,
@@ -98,20 +98,11 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
         uint256 endTime
     );
 
-    event TokensReleased(
-        uint256 indexed scheduleId,
-        address indexed token,
-        address indexed recipient,
-        uint256 amount
-    );
+    event TokensReleased(uint256 indexed scheduleId, address indexed token, address indexed recipient, uint256 amount);
 
     event VestingScheduleCancelled(uint256 indexed scheduleId);
 
-    event RecipientChanged(
-        uint256 indexed scheduleId,
-        address indexed oldRecipient,
-        address indexed newRecipient
-    );
+    event RecipientChanged(uint256 indexed scheduleId, address indexed oldRecipient, address indexed newRecipient);
 
     event VestingFeeUpdated(uint256 newFeePercentage);
 
@@ -170,7 +161,7 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         emit VestingScheduleCreated(scheduleId, _token, msg.sender, _recipient, _amount, _startTime, _endTime);
-        
+
         return scheduleId;
     }
 
@@ -209,9 +200,9 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
         for (uint256 i = 0; i < _recipients.length; i++) {
             require(_recipients[i] != address(0), "Recipient cannot be zero address");
             require(_amounts[i] > 0, "Amount must be greater than 0");
-            
+
             totalAmount += _amounts[i];
-            
+
             scheduleIds[i] = _createSchedule(
                 _token,
                 msg.sender,
@@ -228,13 +219,7 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
             );
 
             emit VestingScheduleCreated(
-                scheduleIds[i],
-                _token,
-                msg.sender,
-                _recipients[i],
-                _amounts[i],
-                _startTime,
-                _endTime
+                scheduleIds[i], _token, msg.sender, _recipients[i], _amounts[i], _startTime, _endTime
             );
         }
 
@@ -320,12 +305,12 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
         }
 
         schedule.releasedAmount += releasableAmount;
-        
+
         // Update token info
         tokenVestingInfo[schedule.token].totalReleasedAmount += releasableAmount;
 
         IERC20(schedule.token).safeTransfer(schedule.recipient, amountAfterFee);
-        
+
         if (fee > 0) {
             IERC20(schedule.token).safeTransfer(feeRecipient, fee);
         }
@@ -357,7 +342,7 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
                     tokenVestingInfo[schedule.token].totalReleasedAmount += releasableAmount;
 
                     IERC20(schedule.token).safeTransfer(_recipient, amountAfterFee);
-                    
+
                     if (fee > 0) {
                         IERC20(schedule.token).safeTransfer(feeRecipient, fee);
                     }
@@ -408,7 +393,7 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
             tokenVestingInfo[schedule.token].totalReleasedAmount += releasableAmount;
 
             IERC20(schedule.token).safeTransfer(schedule.recipient, amountAfterFee);
-            
+
             if (fee > 0) {
                 IERC20(schedule.token).safeTransfer(feeRecipient, fee);
             }
@@ -437,7 +422,9 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
         require(!schedule.cancelled, "Schedule is cancelled");
 
         bool canChange = false;
-        if (schedule.changeRecipientPermission == ChangeRecipientPermission.SENDER_ONLY && msg.sender == schedule.sender) {
+        if (
+            schedule.changeRecipientPermission == ChangeRecipientPermission.SENDER_ONLY && msg.sender == schedule.sender
+        ) {
             canChange = true;
         } else if (
             schedule.changeRecipientPermission == ChangeRecipientPermission.RECIPIENT_ONLY
@@ -484,7 +471,7 @@ contract MultiTokenVestingManager is ReentrancyGuard, Ownable {
                     tokenVestingInfo[schedule.token].totalReleasedAmount += releasableAmount;
 
                     IERC20(schedule.token).safeTransfer(schedule.recipient, amountAfterFee);
-                    
+
                     if (fee > 0) {
                         IERC20(schedule.token).safeTransfer(feeRecipient, fee);
                     }

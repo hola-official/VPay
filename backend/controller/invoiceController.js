@@ -1,7 +1,6 @@
 const Invoice = require("../model/invoiceModel");
 const {
   sendInvoiceMail,
-  sendPaymentNotificationMail,
   sendRecurringInvoiceMail,
   sendOverdueReminderMail,
 } = require("../utils/sendMail");

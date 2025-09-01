@@ -11,7 +11,7 @@ contract CheckBalance is Script {
 
         Circle circle = Circle(tokenAddress);
         uint256 balance = circle.balanceOf(user);
-        
+
         uint8 decimals = circle.decimals();
 
         console.log("Raw balance:", balance);

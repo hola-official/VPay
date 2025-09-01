@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const corsOptions = require("./config/corsOptions");
 const workerRoutes = require("./routes/userRoutes");
+const invoiceRoutes = require("./routes/invoiceRoutes");
 
 dotenv.config();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/workers", workerRoutes);
+app.use("/api/invoices", invoiceRoutes);
 
 // Health check endpoint
 app.get("/", (req, res) => {

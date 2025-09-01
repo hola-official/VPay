@@ -5,6 +5,14 @@ import {
   BriefcaseBusiness,
   Contact,
   X,
+  FileText,
+  CreditCard,
+  Repeat,
+  Receipt,
+  BarChart3,
+  Settings,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
 import { useState } from "react";
@@ -14,50 +22,229 @@ import { motion } from "framer-motion";
 
 export function Sidebar({ isOpen, onClose }) {
   const { pathname } = useLocation();
-  const [showTooltip, setShowTooltip] = useState(null);
+  const [expandedGroups, setExpandedGroups] = useState({
+    invoices: true,
+    tokenLock: false,
+  });
 
   const isActive = (path) => {
     return pathname === path;
+  };
+
+  const toggleGroup = (groupName) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName],
+    }));
   };
 
   const navItems = [
     {
       path: "/",
       label: "Dashboard",
-      icon: List,
-      description: "Overview of your locks and vesting schedules",
+      icon: BarChart3,
+      description: "Overview of invoices, payments, and statistics",
+      standalone: true,
     },
     {
-      path: "/create-lock",
-      label: "Create Lock",
+      group: "invoices",
+      label: "Invoice Management",
+      icon: FileText,
+      description: "Manage invoices, payments, and receipts",
+      items: [
+        {
+          path: "/invoices",
+          label: "Invoices",
+          icon: FileText,
+          description: "Create and manage your invoices",
+        },
+        {
+          path: "/payments",
+          label: "Payments",
+          icon: CreditCard,
+          description: "Process crypto and bank payments",
+        },
+        {
+          path: "/recurring",
+          label: "Recurring",
+          icon: Repeat,
+          description: "Manage automated recurring invoices",
+        },
+        {
+          path: "/receipts",
+          label: "Receipts",
+          icon: Receipt,
+          description: "View payment receipts and NFT tokens",
+        },
+      ],
+    },
+    {
+      group: "tokenLock",
+      label: "Token Lock",
       icon: PlusCircle,
-      description: "Lock your tokens with secure time-release vault",
-    },
-    {
-      path: "/pay",
-      label: "Create Payroll",
-      icon: BriefcaseBusiness,
-      description: "Create payroll vesting for your workers",
-    },
-    {
-      path: "/token-lock",
-      label: "Token Locks",
-      icon: List,
-      description: "View all token locks and manage your own",
+      description: "Token vesting and locking features",
+      items: [
+        {
+          path: "/create-lock",
+          label: "Create Lock",
+          icon: PlusCircle,
+          description: "Lock your tokens with secure time-release vault",
+        },
+        {
+          path: "/pay",
+          label: "Create Payroll",
+          icon: BriefcaseBusiness,
+          description: "Create payroll vesting for your workers",
+        },
+        {
+          path: "/token-lock",
+          label: "Token Locks",
+          icon: List,
+          description: "View all token locks and manage your own",
+        },
+      ],
     },
     {
       path: "/contact",
       label: "Contact",
       icon: Contact,
       description: "Manage contact information",
+      standalone: true,
     },
-    // {
-    //   path: "/lp-lock",
-    //   label: "LP Locks",
-    //   icon: List,
-    //   description: "View all liquidity pool token locks",
-    // },
+    {
+      path: "/settings",
+      label: "Settings",
+      icon: Settings,
+      description: "Configure payment methods and preferences",
+      standalone: true,
+    },
   ];
+
+  const renderNavItem = (item, isSubItem = false) => {
+    const Icon = item.icon;
+    const isItemActive = isActive(item.path);
+
+    return (
+      <Link key={item.path} to={item.path}>
+        <motion.button
+          className={cn(
+            "w-full p-3 rounded-xl transition-all duration-300 group relative overflow-hidden",
+            isSubItem ? "ml-4" : "",
+            isItemActive
+              ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 shadow-lg shadow-blue-500/10"
+              : "bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20"
+          )}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onClose?.()}
+        >
+          {/* Neumorphism effect */}
+          <div
+            className={cn(
+              "absolute inset-0 rounded-xl transition-all duration-300",
+              isItemActive
+                ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)]"
+                : "shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-1px_0_rgba(0,0,0,0.05)]"
+            )}
+          />
+
+          <div className="relative flex items-center gap-3">
+            <div
+              className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
+                isItemActive
+                  ? "bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/25"
+                  : "bg-white/10 group-hover:bg-white/20"
+              )}
+            >
+              <Icon
+                className={cn(
+                  "w-4 h-4 transition-colors duration-300",
+                  isItemActive
+                    ? "text-white"
+                    : "text-gray-300 group-hover:text-white"
+                )}
+              />
+            </div>
+
+            <div className="text-left flex-1 min-w-0">
+              <h3
+                className={cn(
+                  "font-medium transition-colors duration-300 text-sm truncate",
+                  isItemActive
+                    ? "text-white"
+                    : "text-gray-300 group-hover:text-white"
+                )}
+              >
+                {item.label}
+              </h3>
+              {!isSubItem && (
+                <p className="text-xs text-gray-400 group-hover:text-gray-300 truncate">
+                  {item.description}
+                </p>
+              )}
+            </div>
+
+            {/* Active indicator */}
+            {isItemActive && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 shadow-lg shadow-blue-400/50" />
+            )}
+          </div>
+        </motion.button>
+      </Link>
+    );
+  };
+
+  const renderGroup = (group) => {
+    const GroupIcon = group.icon;
+    const isExpanded = expandedGroups[group.group];
+
+    return (
+      <div key={group.group} className="space-y-2">
+        {/* Group Header */}
+        <button
+          onClick={() => toggleGroup(group.group)}
+          className="w-full p-3 rounded-xl transition-all duration-300 group relative overflow-hidden bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-all duration-300">
+              <GroupIcon className="w-4 h-4 text-gray-300 group-hover:text-white transition-colors duration-300" />
+            </div>
+
+            <div className="text-left flex-1 min-w-0">
+              <h3 className="font-medium text-sm text-gray-300 group-hover:text-white transition-colors duration-300">
+                {group.label}
+              </h3>
+              <p className="text-xs text-gray-400 group-hover:text-gray-300 truncate">
+                {group.description}
+              </p>
+            </div>
+
+            <div className="text-gray-400 group-hover:text-white transition-colors duration-300">
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
+            </div>
+          </div>
+        </button>
+
+        {/* Group Items */}
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-1"
+          >
+            {group.items.map((item) => renderNavItem(item, true))}
+          </motion.div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -105,94 +292,14 @@ export function Sidebar({ isOpen, onClose }) {
             </div>
 
             {/* Navigation */}
-            <nav className="space-y-2 sm:space-y-3">
+            <nav className="space-y-3">
               {navItems.map((item) => {
-                const Icon = item.icon;
-                const isItemActive = isActive(item.path);
-
-                return (
-                  <div key={item.path} className="relative">
-                    <Link to={item.path}>
-                      <motion.button
-                        className={cn(
-                          "w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-all duration-300 group relative overflow-hidden",
-                          isItemActive
-                            ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 shadow-lg shadow-blue-500/10"
-                            : "bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20"
-                        )}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onMouseEnter={() => setShowTooltip(item.path)}
-                        onMouseLeave={() => setShowTooltip(null)}
-                        onClick={() => onClose?.()}
-                      >
-                        {/* Neumorphism effect */}
-                        <div
-                          className={cn(
-                            "absolute inset-0 rounded-xl sm:rounded-2xl transition-all duration-300",
-                            isItemActive
-                              ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)]"
-                              : "shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-1px_0_rgba(0,0,0,0.05)]"
-                          )}
-                        />
-
-                        <div className="relative flex items-center gap-3 sm:gap-4">
-                          <div
-                            className={cn(
-                              "w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-300",
-                              isItemActive
-                                ? "bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/25"
-                                : "bg-white/10 group-hover:bg-white/20"
-                            )}
-                          >
-                            <Icon
-                              className={cn(
-                                "w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-300",
-                                isItemActive
-                                  ? "text-white"
-                                  : "text-gray-300 group-hover:text-white"
-                              )}
-                            />
-                          </div>
-
-                          <div className="text-left flex-1 min-w-0">
-                            <h3
-                              className={cn(
-                                "font-semibold transition-colors duration-300 text-sm sm:text-base truncate",
-                                isItemActive
-                                  ? "text-white"
-                                  : "text-gray-300 group-hover:text-white"
-                              )}
-                            >
-                              {item.label}
-                            </h3>
-                            <p className="text-xs text-gray-400 group-hover:text-gray-300 truncate">
-                              {item.description}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Active indicator */}
-                        {isItemActive && (
-                          <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 shadow-lg shadow-blue-400/50" />
-                        )}
-                      </motion.button>
-                    </Link>
-
-                    {/* Tooltip for desktop */}
-                    {showTooltip === item.path && (
-                      <motion.div
-                        className="hidden lg:block absolute left-full top-1/2 transform -translate-y-1/2 ml-2 w-48 p-2 bg-[#0a0a20] border border-[#475B74]/50 rounded-lg shadow-lg text-xs text-[#97CBDC]/90 text-center z-10"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {item.description}
-                        <div className="absolute left-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 rotate-45 w-2 h-2 bg-[#0a0a20] border-l border-b border-[#475B74]/50"></div>
-                      </motion.div>
-                    )}
-                  </div>
-                );
+                if (item.standalone) {
+                  return renderNavItem(item);
+                } else if (item.group) {
+                  return renderGroup(item);
+                }
+                return null;
               })}
             </nav>
           </div>
