@@ -286,18 +286,37 @@ const payInvoice = async (req, res) => {
       });
     }
 
-    if (!paymentType || !["crypto", "bank"].includes(paymentType)) {
+    if (!id) {
       return res.status(400).json({
         success: false,
-        message: "Payment type must be either 'crypto' or 'bank'",
+        message: "Invoice ID is required",
       });
     }
-
     const invoice = await Invoice.findById(id);
+
     if (!invoice) {
       return res.status(404).json({
         success: false,
         message: "Invoice not found",
+      });
+    }
+
+    // Check minimum payment requirement (40% of grand total)
+    const minimumPayment = invoice.grandTotal * 0.4;
+    if (
+      amountPaid < minimumPayment &&
+      invoice.remainingAmount > minimumPayment
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Minimum payment required is ${invoice.currency || "USD"} ${minimumPayment.toFixed(2)} (40% of total amount)`,
+      });
+    }
+
+    if (!paymentType || !["crypto", "bank"].includes(paymentType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment type must be either 'crypto' or 'bank'",
       });
     }
 
@@ -1022,25 +1041,66 @@ const getInvoiceStats = async (req, res) => {
       invoiceStatus: "Overdue",
     });
 
-    // Calculate total amounts
-    const pipeline = [
+    // Calculate total amounts by status and get currency info
+    const amountPipeline = [
       { $match: { creatorId } },
       {
         $group: {
-          _id: null,
+          _id: "$invoiceStatus",
           totalAmount: { $sum: "$grandTotal" },
           totalReceived: { $sum: "$totalAmountReceived" },
           totalRemaining: { $sum: "$remainingAmount" },
+          currencies: { $addToSet: "$currency" },
         },
       },
     ];
 
-    const amountStats = await Invoice.aggregate(pipeline);
-    const amounts = amountStats[0] || {
-      totalAmount: 0,
-      totalReceived: 0,
-      totalRemaining: 0,
-    };
+    // Get currency distribution
+    const currencyPipeline = [
+      { $match: { creatorId } },
+      {
+        $group: {
+          _id: "$currency",
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$grandTotal" },
+        },
+      },
+      { $sort: { totalAmount: -1 } },
+    ];
+
+    const amountStats = await Invoice.aggregate(amountPipeline);
+    const currencyStats = await Invoice.aggregate(currencyPipeline);
+
+    // Get the primary currency (most used by total amount)
+    const primaryCurrency =
+      currencyStats.length > 0 ? currencyStats[0]._id : "USD";
+
+    // Initialize amounts
+    let totalPaidAmount = 0;
+    let totalPendingAmount = 0;
+    let totalOverdueAmount = 0;
+    let totalAmount = 0;
+    let totalReceived = 0;
+    let totalRemaining = 0;
+
+    // Process amount stats by status
+    amountStats.forEach((stat) => {
+      totalAmount += stat.totalAmount;
+      totalReceived += stat.totalReceived;
+      totalRemaining += stat.totalRemaining;
+
+      switch (stat._id) {
+        case "Paid":
+          totalPaidAmount = stat.totalAmount;
+          break;
+        case "Awaiting Payment":
+          totalPendingAmount = stat.totalAmount;
+          break;
+        case "Overdue":
+          totalOverdueAmount = stat.totalAmount;
+          break;
+      }
+    });
 
     res.status(200).json({
       success: true,
@@ -1050,7 +1110,14 @@ const getInvoiceStats = async (req, res) => {
         paidInvoices,
         pendingInvoices,
         overdueInvoices,
-        ...amounts,
+        totalAmount,
+        totalReceived,
+        totalRemaining,
+        totalPaidAmount,
+        totalPendingAmount,
+        totalOverdueAmount,
+        currency: primaryCurrency,
+        currencyStats,
         walletAddress: creatorId,
       },
     });

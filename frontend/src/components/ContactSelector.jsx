@@ -136,6 +136,7 @@ export default function ContactSelector({
           )}
           {selectedContact && !isLoading && !isSearching && (
             <button
+              type="button"
               onClick={clearSelection}
               className="text-[#97CBDC]/70 hover:text-[#97CBDC] transition-colors"
             >
@@ -183,6 +184,7 @@ export default function ContactSelector({
                 {filteredContacts.map((contact) => (
                   <Motion.button
                     key={contact._id || contact.id}
+                    type="button"
                     onClick={() => handleContactSelect(contact)}
                     className="w-full px-4 py-3 text-left hover:bg-[#0a0a20]/50 transition-colors"
                     whileHover={{ backgroundColor: "rgba(10, 10, 32, 0.5)" }}

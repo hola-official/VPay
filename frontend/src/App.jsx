@@ -13,7 +13,6 @@ import InvoicesPage from "@/pages/Invoices";
 import PaymentsPage from "@/pages/Payments";
 import RecurringPage from "@/pages/Recurring";
 import ReceiptsPage from "@/pages/Receipts";
-import SettingsPage from "@/pages/Settings";
 import InvoiceViewPage from "@/pages/InvoiceView";
 import CreateInvoicePage from "@/pages/CreateInvoice";
 
@@ -47,7 +46,6 @@ function App() {
               <Route path="/contact" element={<ContactsPage />} />
               <Route path="/token-lock" element={<TokenLock />} />
               <Route path="/lp-lock" element={<LPLockListPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </div>
         </main>

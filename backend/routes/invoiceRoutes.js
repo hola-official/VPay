@@ -16,6 +16,10 @@ const {
   stopRecurringInvoice,
   getAllRecurringInvoices,
   getInvoiceChain,
+  // getTransactionByHash,
+  // getNFTReceiptById,
+  generateRecurringInvoices,
+  sendOverdueReminders,
 } = require("../controller/invoiceController");
 
 // Create a new invoice
@@ -45,6 +49,22 @@ router.get("/stats/:creatorId", getInvoiceStats);
 // Get invoices by creator wallet address
 // GET /api/invoices/wallet/0x123...
 router.get("/wallet/:creatorId", getInvoicesByWallet);
+
+// Get transaction by hash
+// GET /api/invoices/transaction/0x123...
+// router.get("/transaction/:txnHash", getTransactionByHash);
+
+// Get NFT receipt by ID
+// GET /api/invoices/nft-receipt/NFT-123
+// router.get("/nft-receipt/:nftReceiptId", getNFTReceiptById);
+
+// Generate recurring invoices
+// POST /api/invoices/generate-recurring?creatorId=0x123...
+router.post("/generate-recurring", generateRecurringInvoices);
+
+// Send overdue reminders
+// POST /api/invoices/send-overdue-reminders?creatorId=0x123...
+router.post("/send-overdue-reminders", sendOverdueReminders);
 
 // Get invoice by ID
 // GET /api/invoices/507f1f77bcf86cd799439011

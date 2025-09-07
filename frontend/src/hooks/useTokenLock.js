@@ -14,7 +14,6 @@ import { TOKEN_LOCKER_ADDRESS, TOKEN_LOCKER_ABI } from "@/lib/tokenLock";
 
 // Utility function for multicall
 export async function multiChainMulticall(chainConfigs) {
-
   const results = {};
 
   // Execute multicall for each chain
@@ -47,7 +46,6 @@ export function useTokenLock() {
   const [isLocking, setIsLocking] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentTxHash, setCurrentTxHash] = useState(null);
-  const [approvalTxHash, setApprovalTxHash] = useState(null);
   const [lockStatus, setLockStatus] = useState({
     status: null, // 'success', 'error', 'pending', null
     txHash: null,
@@ -83,7 +81,7 @@ export function useTokenLock() {
           try {
             // This is simplified and would need proper event parsing
             return log.topics[0] === "0x..."; // LockAdded event signature
-          } catch (e) {
+          } catch {
             return false;
           }
         });
@@ -177,8 +175,6 @@ export function useTokenLock() {
             args: [lockerContractAddress, amountInWei],
           });
 
-          setApprovalTxHash(hash);
-
           // Wait for transaction completion
           const receipt = await waitForTransaction(config, {
             hash,
@@ -210,7 +206,6 @@ export function useTokenLock() {
         return false;
       } finally {
         setIsApproving(false);
-        setApprovalTxHash(null);
       }
     },
     [lockerContractAddress, approveTokenAsync]
@@ -669,15 +664,8 @@ export function useTokenLock() {
             txHash: hash,
           }));
 
-          const receipt = await waitForTransaction(config, {
-            hash: hash,
-          });
-
-          if (receipt.status !== "success") {
-            throw new Error("Multiple vesting locks transaction failed");
-          }
-
-          return { hash, receipt, count: owners.length };
+          // Don't wait for transaction here - let the toast.promise handle it
+          return { hash, count: owners.length };
         };
 
         // Use toast.promise for the multiple vesting locks transaction
@@ -809,18 +797,9 @@ export function useTokenLock() {
             throw new Error("Token locking failed or was rejected");
           }
 
-          const receipt = await waitForTransaction(config, {
-            hash: hash,
-          });
-
-          if (receipt.status !== "success") {
-            throw new Error("Transaction reverted");
-          }
-
           return {
             hash,
             isLpToken,
-            receipt,
             amount,
             tokenAddress,
           };
@@ -828,17 +807,11 @@ export function useTokenLock() {
 
         const result = await lockProcessPromise();
 
-        const receipt = await waitForTransaction(config, {
+        return {
+          success: true,
           hash: result.hash,
-        });
-
-        if (receipt.status === "success") {
-          return {
-            success: true,
-            hash: result.hash,
-            isLpToken: result.isLpToken,
-          };
-        }
+          isLpToken: result.isLpToken,
+        };
       } catch (error) {
         console.error("Error in token lock process:", error);
         setLockStatus({
@@ -995,15 +968,13 @@ export function useTokenLock() {
           return { chains: {} };
         }
 
-        // Get chains to query - use provided chains or all supported chains
-        const chainsToQuery =
-          targetChainIds ||
-          Object.keys(TOKEN_LOCKER_ADDRESSES).map((id) => parseInt(id));
+        // Get chains to query - use provided chains or current chain only
+        const chainsToQuery = targetChainIds || [chainId];
 
         // Prepare multicall configurations for each chain
         const chainConfigs = chainsToQuery
           .map((chainId) => {
-            const contractAddress = TOKEN_LOCKER_ADDRESSES[chainId];
+            const contractAddress = TOKEN_LOCKER_ADDRESS;
             if (!contractAddress) return null;
 
             return {

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+// import "@openzeppelin/contracts/token/ERC721/ERC721.sol"; // Commented out - NFT functionality removed
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -99,7 +99,7 @@ library StorageLib {
     }
 }
 
-contract InvoicePayment is ERC721, Ownable, ReentrancyGuard {
+contract InvoicePayment is /* ERC721, */ Ownable, ReentrancyGuard { // Commented out ERC721 inheritance
     using PaymentLib for *;
     using StorageLib for *;
 
@@ -117,7 +117,7 @@ contract InvoicePayment is ERC721, Ownable, ReentrancyGuard {
     mapping(address => StorageLib.ReceiptArray) private payerReceipts;
     mapping(bytes32 => bool) public processedTransactions;
 
-    constructor() ERC721("Invoice Payment Receipt", "IPR") Ownable(msg.sender) {}
+    constructor() /* ERC721("Invoice Payment Receipt", "IPR") */ Ownable(msg.sender) {} // Commented out ERC721 constructor
 
     /**
      * @dev Make a single payment for an invoice
@@ -170,8 +170,8 @@ contract InvoicePayment is ERC721, Ownable, ReentrancyGuard {
         creatorReceipts[_creator].pushToArray(newReceiptId);
         payerReceipts[msg.sender].pushToArray(newReceiptId);
 
-        // Mint NFT
-        _safeMint(msg.sender, newReceiptId);
+        // // Mint NFT - COMMENTED OUT
+        // _safeMint(msg.sender, newReceiptId);
 
         emit PaymentLib.PaymentMade(newReceiptId, _invoiceId, msg.sender, _creator, _token, _amount, _metadataURI);
 
@@ -244,8 +244,8 @@ contract InvoicePayment is ERC721, Ownable, ReentrancyGuard {
             creatorReceipts[_creator].pushToArray(newReceiptId);
             payerReceipts[msg.sender].pushToArray(newReceiptId);
 
-            // Mint NFT
-            _safeMint(msg.sender, newReceiptId);
+            // // Mint NFT - COMMENTED OUT
+            // _safeMint(msg.sender, newReceiptId);
 
             emit PaymentLib.PaymentMade(
                 newReceiptId, _invoiceId, msg.sender, _creator, _token, _amounts[i], _metadataURIs[i]
@@ -342,24 +342,25 @@ contract InvoicePayment is ERC721, Ownable, ReentrancyGuard {
         return receipts;
     }
 
-    function getReceiptById(uint128 _tokenId) external view returns (PaymentLib.PaymentReceipt memory) {
-        require(_exists(uint256(_tokenId)), "Receipt does not exist");
-        return paymentReceipts[_tokenId];
+    function getReceiptById(uint128 _receiptId) external view returns (PaymentLib.PaymentReceipt memory) {
+        require(_receiptId > 0 && _receiptId <= _receiptIds, "Receipt does not exist"); // Updated validation since we don't have NFT _exists function
+        return paymentReceipts[_receiptId];
     }
 
-    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-        require(_exists(_tokenId), "Receipt does not exist");
-        return paymentReceipts[uint128(_tokenId)].metadataURI;
-    }
+    // // NFT-related functions - COMMENTED OUT
+    // function tokenURI(uint256 _tokenId) public view override returns (string memory) {
+    //     require(_exists(_tokenId), "Receipt does not exist");
+    //     return paymentReceipts[uint128(_tokenId)].metadataURI;
+    // }
 
     function getCurrentReceiptId() external view returns (uint128) {
         return _receiptIds;
     }
 
-    // Gas-efficient helper function to check if token exists
-    function _exists(uint256 tokenId) internal view returns (bool) {
-        return tokenId <= _receiptIds && tokenId > 0;
-    }
+    // // Gas-efficient helper function to check if token exists - COMMENTED OUT (NFT-related)
+    // function _exists(uint256 tokenId) internal view returns (bool) {
+    //     return tokenId <= _receiptIds && tokenId > 0;
+    // }
 
     // Emergency function for owner to update contract state if needed
     function emergencyPause() external onlyOwner {
